@@ -53,3 +53,5 @@ Thumbs.db
 # AI Logs & Specs
 gemini.md
 GEMINI2.md
+.htaccess-example
+supervisor-example.conf

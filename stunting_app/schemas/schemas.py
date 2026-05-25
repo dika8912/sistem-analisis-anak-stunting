@@ -3,6 +3,13 @@ from typing import List, Optional
 from datetime import date
 from enum import Enum
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=6)
+
 class RoleEnum(str, Enum):
     admin = "admin"
     user = "user"

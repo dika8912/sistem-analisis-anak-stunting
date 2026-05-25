@@ -279,6 +279,7 @@ Melakukan autentikasi dan mendapatkan **JWT Access Token**.
 |------------|----------|-------|------------|
 | `username` | `string` | ✅    | Username terdaftar |
 | `password` | `string` | ✅    | Password akun |
+| `remember_me` | `boolean` | ❌    | (Opsional) True untuk masa berlaku token 30 hari |
 
 **Contoh Request (curl):**
 ```bash
@@ -301,6 +302,70 @@ curl -X POST "http://localhost:5601/api/auth/login" \
 |------|---------|
 | `401` | Username atau password salah |
 | `422` | Form data tidak lengkap |
+
+---
+
+### Auth: Forgot Password
+
+```http
+POST /api/auth/forgot-password
+```
+
+Meminta token untuk melakukan reset password berdasarkan alamat email terdaftar.
+
+**Auth:** Tidak diperlukan (Publik)
+
+**Content-Type:** `application/json`
+
+**Request Body:**
+
+| Field   | Tipe     | Wajib | Keterangan |
+|---------|----------|-------|------------|
+| `email` | `string` | ✅    | Email terdaftar akun pengguna |
+
+**Response `200 OK`:**
+```json
+{
+  "message": "If your email is registered, you will receive a password reset link.",
+  "reset_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+---
+
+### Auth: Reset Password
+
+```http
+POST /api/auth/reset-password
+```
+
+Melakukan update password akun dengan menggunakan token valid dari proses forgot password.
+
+**Auth:** Tidak diperlukan (Publik)
+
+**Content-Type:** `application/json`
+
+**Request Body:**
+
+| Field          | Tipe     | Wajib | Keterangan |
+|----------------|----------|-------|------------|
+| `token`        | `string` | ✅    | Token JWT reset password |
+| `new_password` | `string` | ✅    | Password baru (min. 6 karakter) |
+
+**Response `200 OK`:**
+```json
+{
+  "message": "Password successfully reset"
+}
+```
+
+**Error Responses:**
+
+| Kode | Kondisi |
+|------|---------|
+| `400` | Token invalid, tipe salah, atau kedaluwarsa (lebih dari 15 menit) |
+| `404` | User tidak ditemukan |
+| `422` | Password baru kurang dari 6 karakter |
 
 ---
 
