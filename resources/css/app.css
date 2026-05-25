@@ -1,0 +1,20 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+        
+    /* Definisi Color Palette Status (Si Anting) */
+    --color-status-severely: #DC2626; /* Merah Tua */
+    --color-status-stunted: #F97316;  /* Oranye */
+    --color-status-normal: #16A34A;   /* Hijau */
+    --color-status-risk: #CA8A04;     /* Kuning */
+    --color-status-overweight: #9333EA; /* Ungu */
+    --color-status-tall: #2563EB;     /* Biru */
+}
