@@ -277,7 +277,7 @@ Melakukan autentikasi dan mendapatkan **JWT Access Token**.
 
 | Field      | Tipe     | Wajib | Keterangan |
 |------------|----------|-------|------------|
-| `username` | `string` | ✅    | Username terdaftar |
+| `username` | `string` | ✅    | Username terdaftar atau alamat email |
 | `password` | `string` | ✅    | Password akun |
 | `remember_me` | `boolean` | ❌    | (Opsional) True untuk masa berlaku token 30 hari |
 

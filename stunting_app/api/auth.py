@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from stunting_app.core.database import get_db_session
 from stunting_app.core.security import verify_password, get_password_hash, create_access_token
 from stunting_app.models.user import User, RoleEnum
@@ -57,7 +57,12 @@ async def login(
     remember_me: bool = Form(False),
     db: AsyncSession = Depends(get_db_session)
 ):
-    query = select(User).where(User.username == form_data.username)
+    query = select(User).where(
+        or_(
+            User.username == form_data.username,
+            User.email == form_data.username
+        )
+    )
     result = await db.execute(query)
     user = result.scalar_one_or_none()
     
