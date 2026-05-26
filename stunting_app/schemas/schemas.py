@@ -79,7 +79,13 @@ class EducationUpdateRequest(BaseModel):
     image_url: Optional[str] = None
 
 
-class DetectionRequest(BaseModel):
+class CalculateRequest(BaseModel):
+    gender: str = Field(..., description="'M' for Male, 'F' for Female", pattern="^[MF]$")
+    age_in_months: int = Field(..., ge=0, le=60)
+    height_cm: float = Field(..., gt=0)
+    weight_kg: float = Field(..., gt=0)
+
+class PredictRequest(BaseModel):
     gender: str = Field(..., description="'M' for Male, 'F' for Female", pattern="^[MF]$")
     age_in_months: int = Field(..., ge=0, le=60)
     height_cm: float = Field(..., gt=0)
@@ -99,11 +105,14 @@ class MLPredictionResponse(BaseModel):
     wasting_status_ml: str
     wasting_confidence: float
 
-class DetectionResponse(BaseModel):
-    input: DetectionRequest
+class CalculateResponse(BaseModel):
+    input: CalculateRequest
     who_calculation: WHOCalculationResponse
-    ml_prediction: MLPredictionResponse
     recommendations: List[str]
+
+class PredictResponse(BaseModel):
+    input: PredictRequest
+    ml_prediction: MLPredictionResponse
 
 class MeasurementCreateRequest(BaseModel):
     child_id: str

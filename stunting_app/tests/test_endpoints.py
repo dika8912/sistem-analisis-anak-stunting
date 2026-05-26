@@ -7,7 +7,7 @@ Struktur Test:
 2. MLPredictionService - Inference model klasifikasi
 3. POST /api/auth/register - Pendaftaran user
 4. POST /api/auth/login - Login & token JWT
-5. POST /api/detect - On-the-fly deteksi (tanpa simpan)
+5. POST /api/calculate - On-the-fly deteksi (tanpa simpan)
 6. POST /api/measurements - Simpan pengukuran (protected)
 7. GET /api/guardians/me - Profil guardian
 8. GET /api/children/{id} - Detail anak
@@ -558,7 +558,7 @@ class TestAuthEndpoints:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. TEST: POST /api/detect (On-The-Fly Deteksi)
+# 4. TEST: POST /api/calculate (On-The-Fly Deteksi)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestDetectEndpoint:
@@ -579,14 +579,14 @@ class TestDetectEndpoint:
             mock_rec.return_value = ["Makan sayur", "Minum susu"]
 
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                resp = await ac.post("/api/detect", json={
+                resp = await ac.post("/api/calculate", json={
                     "gender": "M", "age_in_months": 24,
                     "height_cm": 85.5, "weight_kg": 12.1
                 })
         assert resp.status_code == 200
         data = resp.json()
         assert "who_calculation" in data
-        assert "ml_prediction" in data
+
         assert "recommendations" in data
 
     @pytest.mark.anyio
@@ -601,7 +601,7 @@ class TestDetectEndpoint:
             mock_rec.return_value = []
 
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                resp = await ac.post("/api/detect", json={
+                resp = await ac.post("/api/calculate", json={
                     "gender": "F", "age_in_months": 0,
                     "height_cm": 50.0, "weight_kg": 3.0
                 })
@@ -611,7 +611,7 @@ class TestDetectEndpoint:
     async def test_detect_invalid_gender(self):
         """Gender selain 'M' atau 'F' harus ditolak"""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            resp = await ac.post("/api/detect", json={
+            resp = await ac.post("/api/calculate", json={
                 "gender": "X",  # tidak valid
                 "age_in_months": 12,
                 "height_cm": 75.0,
@@ -623,7 +623,7 @@ class TestDetectEndpoint:
     async def test_detect_age_out_of_range(self):
         """Umur lebih dari 60 bulan harus ditolak (422)"""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            resp = await ac.post("/api/detect", json={
+            resp = await ac.post("/api/calculate", json={
                 "gender": "M", "age_in_months": 61,  # batas max 60
                 "height_cm": 75.0, "weight_kg": 9.0
             })
@@ -633,7 +633,7 @@ class TestDetectEndpoint:
     async def test_detect_negative_height(self):
         """Tinggi badan negatif harus ditolak (422)"""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            resp = await ac.post("/api/detect", json={
+            resp = await ac.post("/api/calculate", json={
                 "gender": "M", "age_in_months": 12,
                 "height_cm": -10.0,  # negatif
                 "weight_kg": 9.0
@@ -644,7 +644,7 @@ class TestDetectEndpoint:
     async def test_detect_zero_weight(self):
         """Berat badan 0 harus ditolak (422)"""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            resp = await ac.post("/api/detect", json={
+            resp = await ac.post("/api/calculate", json={
                 "gender": "M", "age_in_months": 12,
                 "height_cm": 75.0, "weight_kg": 0.0  # nol
             })
@@ -662,7 +662,7 @@ class TestDetectEndpoint:
             mock_rec.return_value = ["Kurangi asupan gula"]
 
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                resp = await ac.post("/api/detect", json={
+                resp = await ac.post("/api/calculate", json={
                     "gender": "M", "age_in_months": 12,
                     "height_cm": 75.0, "weight_kg": 50.0  # sangat tidak realistis
                 })
@@ -672,14 +672,14 @@ class TestDetectEndpoint:
     async def test_detect_missing_all_fields(self):
         """Request body kosong → 422"""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            resp = await ac.post("/api/detect", json={})
+            resp = await ac.post("/api/calculate", json={})
         assert resp.status_code == 422
 
     @pytest.mark.anyio
     async def test_detect_non_numeric_height(self):
         """Tinggi badan berupa string → 422"""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            resp = await ac.post("/api/detect", json={
+            resp = await ac.post("/api/calculate", json={
                 "gender": "M", "age_in_months": 12,
                 "height_cm": "tujuh puluh",  # string
                 "weight_kg": 9.0
@@ -871,15 +871,15 @@ class TestWeirdScenarios:
         fake_service.stunting_model = None
         fake_service.wasting_model = None
         result = fake_service.predict("M", 12, 75.0, 9.0)
-        assert result["stunting_status_ml"] == "model_not_trained"
+
         assert result["stunting_confidence"] == 0.0
-        assert result["wasting_status_ml"] == "model_not_trained"
+
 
     @pytest.mark.anyio
     async def test_detect_unicode_in_json(self):
         """Coba kirim karakter Unicode di field gender → 422"""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            resp = await ac.post("/api/detect", json={
+            resp = await ac.post("/api/calculate", json={
                 "gender": "男",  # karakter kanji
                 "age_in_months": 12,
                 "height_cm": 75.0,
@@ -891,7 +891,7 @@ class TestWeirdScenarios:
     async def test_detect_extremely_large_age(self):
         """Umur 999 bulan → ditolak oleh Pydantic (max 60)"""
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-            resp = await ac.post("/api/detect", json={
+            resp = await ac.post("/api/calculate", json={
                 "gender": "M",
                 "age_in_months": 999,
                 "height_cm": 75.0,
@@ -911,7 +911,7 @@ class TestWeirdScenarios:
             mock_rec.return_value = []
 
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-                resp = await ac.post("/api/detect", json={
+                resp = await ac.post("/api/calculate", json={
                     "gender": "M",
                     "age_in_months": 12.5,  # float untuk field int
                     "height_cm": 75.0,

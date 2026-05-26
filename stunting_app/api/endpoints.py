@@ -8,7 +8,7 @@ import math
 from stunting_app.core.database import get_db_session
 from stunting_app.config.settings import settings
 from stunting_app.schemas.schemas import (
-    DetectionRequest, DetectionResponse, WHOCalculationResponse, MLPredictionResponse,
+    CalculateRequest, CalculateResponse, PredictRequest, PredictResponse, WHOCalculationResponse, MLPredictionResponse,
     MeasurementCreateRequest, MeasurementResponse, GuardianResponse, ChildResponse,
     ChildCreateRequest, ChildUpdateRequest, EducationResponse, EducationCreateRequest, EducationUpdateRequest,
     AdminStatsResponse
@@ -61,13 +61,17 @@ async def get_who_calculation(
         underweight_status_who=ZScoreService.classify_underweight(waz)
     )
 
-@router.post("/api/detect", response_model=DetectionResponse)
-async def detect_on_the_fly(request: DetectionRequest, db: AsyncSession = Depends(get_db_session)):
+@router.post("/api/calculate", response_model=CalculateResponse)
+async def calculate_zscore_on_the_fly(request: CalculateRequest, db: AsyncSession = Depends(get_db_session)):
     who_res = await get_who_calculation(db, request.gender, request.age_in_months, request.height_cm, request.weight_kg)
+    recommendations = await RecommendationService.get_recommendations(db, stunting_status=who_res.stunting_status_who, age_months=request.age_in_months)
+    return CalculateResponse(input=request, who_calculation=who_res, recommendations=recommendations)
+
+@router.post("/api/predict", response_model=PredictResponse)
+async def predict_ml_on_the_fly(request: PredictRequest):
     ml_res_dict = ml_service.predict(request.gender, request.age_in_months, request.height_cm, request.weight_kg)
     ml_res = MLPredictionResponse(**ml_res_dict)
-    recommendations = await RecommendationService.get_recommendations(db, stunting_status=who_res.stunting_status_who, age_months=request.age_in_months)
-    return DetectionResponse(input=request, who_calculation=who_res, ml_prediction=ml_res, recommendations=recommendations)
+    return PredictResponse(input=request, ml_prediction=ml_res)
 
 @router.post("/api/measurements", response_model=MeasurementResponse)
 async def create_measurement(
