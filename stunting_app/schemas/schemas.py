@@ -124,3 +124,8 @@ class MeasurementResponse(BaseModel):
     measured_by: Optional[str]
     stunting_result: dict
     food_recommendations: List[str]
+
+class AdminStatsResponse(BaseModel):
+    total_children: int
+    total_measurements: int
+    needs_attention: int

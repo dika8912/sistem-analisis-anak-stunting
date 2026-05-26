@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func, distinct, or_
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 import math
@@ -10,7 +10,8 @@ from stunting_app.config.settings import settings
 from stunting_app.schemas.schemas import (
     DetectionRequest, DetectionResponse, WHOCalculationResponse, MLPredictionResponse,
     MeasurementCreateRequest, MeasurementResponse, GuardianResponse, ChildResponse,
-    ChildCreateRequest, ChildUpdateRequest, EducationResponse, EducationCreateRequest, EducationUpdateRequest
+    ChildCreateRequest, ChildUpdateRequest, EducationResponse, EducationCreateRequest, EducationUpdateRequest,
+    AdminStatsResponse
 )
 from stunting_app.services.ml_prediction_service import MLPredictionService
 from stunting_app.services.zscore_service import ZScoreService
@@ -23,6 +24,7 @@ from stunting_app.models.user import User, RoleEnum
 from stunting_app.models.guardian import Guardian
 from stunting_app.models.child import Child
 from stunting_app.models.measurement import Measurement
+from stunting_app.models.stunting_result import StuntingResult
 from stunting_app.models.education import Education
 from stunting_app.api.deps import require_user, require_admin, get_current_active_user
 
@@ -248,7 +250,36 @@ async def update_education(id: str, request: EducationUpdateRequest, db: AsyncSe
 
 @router.delete("/api/admin/educations/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_education(id: str, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(require_admin)):
-    if not await education_repo.delete(db, id=id):
+    success = await education_repo.delete(db, id=id)
+    if not success:
         raise HTTPException(status_code=404, detail="Education not found")
     return None
 
+@router.get("/api/admin/stats", response_model=AdminStatsResponse)
+async def get_admin_stats(db: AsyncSession = Depends(get_db_session), current_user: User = Depends(require_admin)):
+    # Total children
+    result = await db.execute(select(func.count(Child.id)))
+    total_children = result.scalar() or 0
+
+    # Total measurements
+    result = await db.execute(select(func.count(Measurement.id)))
+    total_measurements = result.scalar() or 0
+
+    # Needs attention (unique children who have latest measurement as stunted or wasted)
+    # Using distinct to only count each child once even if they have multiple bad measurements
+    query = select(func.count(distinct(Measurement.child_id)))\
+        .join(StuntingResult, Measurement.id == StuntingResult.measurement_id)\
+        .where(
+            or_(
+                StuntingResult.stunting_status_who.in_(['stunted', 'severely_stunted']),
+                StuntingResult.wasting_status_who.in_(['wasted', 'severely_wasted', 'severely_underweight', 'underweight'])
+            )
+        )
+    result = await db.execute(query)
+    needs_attention = result.scalar() or 0
+
+    return AdminStatsResponse(
+        total_children=total_children,
+        total_measurements=total_measurements,
+        needs_attention=needs_attention
+    )
