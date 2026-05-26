@@ -10,7 +10,7 @@ from stunting_app.config.settings import settings
 from stunting_app.schemas.schemas import (
     DetectionRequest, DetectionResponse, WHOCalculationResponse, MLPredictionResponse,
     MeasurementCreateRequest, MeasurementResponse, GuardianResponse, ChildResponse,
-    ChildCreateRequest
+    ChildCreateRequest, ChildUpdateRequest, EducationResponse, EducationCreateRequest, EducationUpdateRequest
 )
 from stunting_app.services.ml_prediction_service import MLPredictionService
 from stunting_app.services.zscore_service import ZScoreService
@@ -18,10 +18,12 @@ from stunting_app.services.recommendation_service import RecommendationService
 from stunting_app.repositories.who_repository import WHORepository
 from stunting_app.repositories.child_repository import ChildRepository
 from stunting_app.repositories.measurement_repository import MeasurementRepository
+from stunting_app.repositories.education_repository import EducationRepository
 from stunting_app.models.user import User, RoleEnum
 from stunting_app.models.guardian import Guardian
 from stunting_app.models.child import Child
 from stunting_app.models.measurement import Measurement
+from stunting_app.models.education import Education
 from stunting_app.api.deps import require_user, require_admin, get_current_active_user
 
 router = APIRouter()
@@ -31,6 +33,7 @@ ml_service = MLPredictionService(models_dir=settings.MODELS_DIR)
 who_repo = WHORepository()
 child_repo = ChildRepository()
 measurement_repo = MeasurementRepository()
+education_repo = EducationRepository()
 
 async def get_who_calculation(
     db: AsyncSession, gender: str, age_in_months: int, height_cm: float, weight_kg: float
@@ -124,14 +127,12 @@ async def get_my_guardian_profile(db: AsyncSession = Depends(get_db_session), cu
 
 @router.get("/api/children/{id}", response_model=ChildResponse)
 async def get_child(id: str, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(get_current_active_user)):
-    child = await child_repo.get_by_id(db, id)
+    child = await child_repo.get_by_id_with_guardian(db, id)
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
         
     if current_user.role != RoleEnum.admin:
-        query = select(Guardian).where(Guardian.user_id == current_user.id)
-        guardian = (await db.execute(query)).scalar_one_or_none()
-        if not guardian or child.guardian_id != guardian.id:
+        if not child.guardian or child.guardian.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
             
     return child
@@ -152,7 +153,8 @@ async def create_child(
         "guardian_id": guardian.id,
         "name": request.name,
         "gender": request.gender,
-        "date_of_birth": request.date_of_birth
+        "date_of_birth": request.date_of_birth,
+        "nik": request.nik
     }
     
     new_child = await child_repo.create(db, child_data)
@@ -160,14 +162,12 @@ async def create_child(
 
 @router.get("/api/children/{id}/history")
 async def get_child_history(id: str, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(get_current_active_user)):
-    child = await child_repo.get_by_id(db, id)
+    child = await child_repo.get_by_id_with_guardian(db, id)
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
         
     if current_user.role != RoleEnum.admin:
-        query = select(Guardian).where(Guardian.user_id == current_user.id)
-        guardian = (await db.execute(query)).scalar_one_or_none()
-        if not guardian or child.guardian_id != guardian.id:
+        if not child.guardian or child.guardian.user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized")
             
     query = select(Measurement).options(selectinload(Measurement.stunting_result)).where(Measurement.child_id == id).order_by(Measurement.measured_at.desc())
@@ -192,3 +192,63 @@ async def search_children(
     result = await db.execute(query)
     children = result.scalars().all()
     return children
+
+@router.get("/api/admin/children/search", response_model=List[ChildResponse])
+async def search_children_by_category(
+    query_val: str,
+    category: str,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_admin)
+):
+    if category.lower() == 'nik':
+        query = select(Child).where(Child.nik == query_val)
+    elif category.lower() == 'nama':
+        query = select(Child).where(Child.name.ilike(f"%{query_val}%"))
+    else:
+        raise HTTPException(status_code=400, detail="Category must be 'nik' or 'nama'")
+    result = await db.execute(query)
+    return result.scalars().all()
+
+@router.put("/api/admin/children/{id}", response_model=ChildResponse)
+async def update_child(id: str, request: ChildUpdateRequest, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(require_admin)):
+    update_data = request.model_dump(exclude_unset=True)
+    child = await child_repo.update(db, id=id, obj_in=update_data)
+    if not child:
+        raise HTTPException(status_code=404, detail="Child not found")
+    return child
+
+@router.delete("/api/admin/children/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_child(id: str, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(require_admin)):
+    success = await child_repo.delete(db, id=id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Child not found")
+    return None
+
+@router.get("/api/educations", response_model=List[EducationResponse])
+async def get_educations(db: AsyncSession = Depends(get_db_session)):
+    return await education_repo.get_all(db)
+
+@router.get("/api/educations/{id}", response_model=EducationResponse)
+async def get_education(id: str, db: AsyncSession = Depends(get_db_session)):
+    edu = await education_repo.get_by_id(db, id)
+    if not edu:
+        raise HTTPException(status_code=404, detail="Education not found")
+    return edu
+
+@router.post("/api/admin/educations", response_model=EducationResponse, status_code=status.HTTP_201_CREATED)
+async def create_education(request: EducationCreateRequest, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(require_admin)):
+    return await education_repo.create(db, obj_in=request.model_dump())
+
+@router.put("/api/admin/educations/{id}", response_model=EducationResponse)
+async def update_education(id: str, request: EducationUpdateRequest, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(require_admin)):
+    edu = await education_repo.update(db, id=id, obj_in=request.model_dump(exclude_unset=True))
+    if not edu:
+        raise HTTPException(status_code=404, detail="Education not found")
+    return edu
+
+@router.delete("/api/admin/educations/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_education(id: str, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(require_admin)):
+    if not await education_repo.delete(db, id=id):
+        raise HTTPException(status_code=404, detail="Education not found")
+    return None
+

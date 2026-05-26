@@ -12,6 +12,7 @@ class Child(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     gender: Mapped[str] = mapped_column(String(1), nullable=False)  # 'M' or 'F'
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
+    nik: Mapped[str | None] = mapped_column(String(16), nullable=True, unique=True)
 
     guardian = relationship("Guardian", back_populates="children")
     measurements = relationship("Measurement", back_populates="child", cascade="all, delete-orphan")

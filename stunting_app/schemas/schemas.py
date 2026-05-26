@@ -48,11 +48,36 @@ class ChildResponse(BaseModel):
     name: str
     gender: str
     date_of_birth: date
+    nik: Optional[str] = None
 
 class ChildCreateRequest(BaseModel):
     name: str = Field(..., min_length=2)
     gender: str = Field(..., description="'M' for Male, 'F' for Female", pattern="^[MF]$")
     date_of_birth: date
+    nik: Optional[str] = Field(None, min_length=16, max_length=16, description="16 digit NIK")
+
+class ChildUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=2)
+    gender: Optional[str] = Field(None, description="'M' for Male, 'F' for Female", pattern="^[MF]$")
+    date_of_birth: Optional[date] = None
+    nik: Optional[str] = Field(None, min_length=16, max_length=16, description="16 digit NIK")
+
+class EducationResponse(BaseModel):
+    id: str
+    title: str
+    content: str
+    image_url: Optional[str] = None
+
+class EducationCreateRequest(BaseModel):
+    title: str = Field(..., min_length=3)
+    content: str = Field(..., min_length=10)
+    image_url: Optional[str] = None
+
+class EducationUpdateRequest(BaseModel):
+    title: Optional[str] = Field(None, min_length=3)
+    content: Optional[str] = Field(None, min_length=10)
+    image_url: Optional[str] = None
+
 
 class DetectionRequest(BaseModel):
     gender: str = Field(..., description="'M' for Male, 'F' for Female", pattern="^[MF]$")

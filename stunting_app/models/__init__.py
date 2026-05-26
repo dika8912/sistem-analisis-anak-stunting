@@ -5,6 +5,7 @@ from .stunting_result import StuntingResult
 from .who_standard import WHOStandard
 from .food_recommendation import FoodRecommendation
 from .user import User
+from .education import Education
 
 __all__ = [
     "Guardian",
@@ -13,5 +14,6 @@ __all__ = [
     "StuntingResult",
     "WHOStandard",
     "FoodRecommendation",
-    "User"
+    "User",
+    "Education"
 ]
