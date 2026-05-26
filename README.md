@@ -23,7 +23,8 @@ Backend API untuk deteksi **Stunting** dan **Wasting** pada anak usia 0–60 bul
   - [Detail Anak](#detail-anak)
   - [Histori Pengukuran Anak](#histori-pengukuran-anak)
   - [Pencarian Anak (Admin)](#pencarian-anak-admin)
-- [Kode Status HTTP](#kode-status-http)
+  - [Manajemen Anak (Admin)](#manajemen-anak-admin)
+  - [Modul Edukasi](#modul-edukasi)
 - [Menjalankan Unit Test](#menjalankan-unit-test)
 
 ---
@@ -64,8 +65,8 @@ stunting_app/
 │   │   ├── stunting_classifier.joblib     ← Model stunting terlatih
 │   │   └── wasting_classifier.joblib      ← Model wasting terlatih
 │   └── train.py             ← Script training model
-├── models/                  ← SQLAlchemy ORM models
-├── repositories/            ← Async DB repositories
+├── models/                  ← SQLAlchemy ORM models (child.py, education.py, etc)
+├── repositories/            ← Async DB repositories (termasuk education_repository.py)
 ├── seeds/
 │   ├── who_seed.py          ← Seed data WHO Standards
 │   ├── who_standards.csv    ← CSV WHO LMS parameters
@@ -745,10 +746,10 @@ Jika anak belum memiliki riwayat pengukuran, response akan berupa array kosong `
 ### Pencarian Anak (Admin)
 
 ```http
-GET /api/admin/children
+GET /api/admin/children/search
 ```
 
-Endpoint **eksklusif admin** untuk mencari dan menampilkan daftar anak berdasarkan nama orang tua dan nomor KK. Digunakan untuk keperluan verifikasi dan pengelolaan data dari sisi admin.
+Endpoint **eksklusif admin** untuk mencari dan menampilkan daftar anak berdasarkan **kategori** (NIK atau Nama). Digunakan untuk keperluan verifikasi dan pengelolaan data dari sisi admin.
 
 **Auth:** ✅ Wajib (`admin` saja, user biasa akan ditolak dengan `403`)
 
@@ -759,14 +760,14 @@ Authorization: Bearer <access_token>
 
 **Query Parameters:**
 
-| Parameter     | Tipe     | Wajib | Keterangan |
-|---------------|----------|-------|------------|
-| `parent_name` | `string` | ✅    | Nama orang tua / wali (pencarian tidak case-sensitive, mendukung sebagian nama) |
-| `nomor_kk`    | `string` | ✅    | Nomor Kartu Keluarga yang tepat (exact match) |
+| Parameter   | Tipe     | Wajib | Keterangan |
+|-------------|----------|-------|------------|
+| `query_val` | `string` | ✅    | Nilai yang dicari (bisa nama atau 16 digit NIK) |
+| `category`  | `string` | ✅    | Kategori pencarian (`nik` atau `nama`) |
 
 **Contoh Request:**
 ```
-GET /api/admin/children?parent_name=Budi&nomor_kk=3201010101010101
+GET /api/admin/children/search?query_val=1234567890123456&category=nik
 ```
 
 **Response `200 OK`:**
@@ -777,27 +778,34 @@ GET /api/admin/children?parent_name=Budi&nomor_kk=3201010101010101
     "guardian_id": "dddddddd-0000-0000-0000-000000000001",
     "name": "Andi Santoso",
     "gender": "M",
-    "date_of_birth": "2024-05-25"
-  },
-  {
-    "id": "cccccccc-0000-0000-0000-000000000002",
-    "guardian_id": "dddddddd-0000-0000-0000-000000000001",
-    "name": "Siti Santoso",
-    "gender": "F",
-    "date_of_birth": "2022-11-10"
+    "date_of_birth": "2024-05-25",
+    "nik": "1234567890123456"
   }
 ]
 ```
 
-Jika tidak ditemukan hasil, response berupa array kosong `[]`.
+---
 
-**Error Responses:**
+### Manajemen Anak (Admin)
 
-| Kode | Kondisi |
-|------|---------|
-| `401` | Token tidak ada atau tidak valid |
-| `403` | User bukan admin |
-| `422` | Query parameter `parent_name` atau `nomor_kk` tidak disertakan |
+```http
+PUT /api/admin/children/{id}
+DELETE /api/admin/children/{id}
+```
+
+Endpoint untuk melakukan *update* profil anak (seperti merevisi NIK/Nama/Tgl Lahir) atau menghapus data anak sepenuhnya beserta histori pengukurannya (`cascade delete`). Hanya bisa diakses oleh role `admin`.
+
+---
+
+### Modul Edukasi
+
+Menyediakan artikel/informasi edukasi gizi dan penanganan stunting untuk masyarakat umum.
+
+- `GET /api/educations`: Melihat daftar artikel edukasi (Publik / Semua User).
+- `GET /api/educations/{id}`: Melihat detail sebuah artikel edukasi.
+- `POST /api/admin/educations`: Membuat artikel edukasi baru (Hanya Admin).
+- `PUT /api/admin/educations/{id}`: Mengupdate artikel (Hanya Admin).
+- `DELETE /api/admin/educations/{id}`: Menghapus artikel (Hanya Admin).
 
 ---
 
