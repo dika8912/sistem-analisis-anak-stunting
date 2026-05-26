@@ -13,9 +13,13 @@
         const currentPath = window.location.pathname;
         const name = localStorage.getItem('user_name') || 'User';
 
-        const publicRoutes = ['/login', '/register', '/', '/edukasi', '/diagnosa', '/detect', '/forgot-password', '/reset-password'];
+        const publicRoutes = ['/login', '/register', '/', '/educations', '/diagnosa', '/detect', '/forgot-password', '/reset-password'];
 
-        if (!token && !publicRoutes.includes(currentPath)) {
+        const isPublic = publicRoutes.some(route => {
+            return currentPath === route || (route !== '/' && currentPath.startsWith(route + '/'));
+        });
+
+        if (!token && !isPublic) {
             // Redirect jika tidak ada token dan bukan di rute publik
             window.location.href = '/login';
         }
@@ -23,6 +27,11 @@
         if (token && currentPath.startsWith('/admin') && role !== 'admin') {
             // Redirect jika mencoba mengakses rute admin tapi bukan admin
             window.location.href = '/dashboard';
+        }
+
+        // Jika admin mengakses dashboard user biasa, arahkan kembali ke admin dashboard
+        if (token && role === 'admin' && (currentPath === '/dashboard' || currentPath === '/children')) {
+            window.location.href = '/admin/dashboard';
         }
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -43,8 +52,11 @@
                 }
                 if (userNameSpan) userNameSpan.innerText = `Halo, ${name}`;
 
-                if (role === 'admin' && adminMenu) {
-                    adminMenu.classList.remove('hidden');
+                if (role === 'admin') {
+                    if (adminMenu) adminMenu.classList.remove('hidden');
+                } else {
+                    const userDashMenu = document.getElementById('nav-user-dashboard');
+                    if (userDashMenu) userDashMenu.classList.remove('hidden');
                 }
             } else {
                 if (guestMenu) {
@@ -56,6 +68,8 @@
                     authMenu.classList.remove('flex');
                 }
                 if (adminMenu) adminMenu.classList.add('hidden');
+                const userDashMenu = document.getElementById('nav-user-dashboard');
+                if (userDashMenu) userDashMenu.classList.add('hidden');
             }
         });
 
@@ -92,10 +106,12 @@
             <div class="flex items-center space-x-8">
                 <ul class="flex space-x-6 font-medium">
                     <li><a href="/" class="hover:text-blue-500 transition-colors">Beranda</a></li>
-                    <li><a href="/edukasi" class="hover:text-blue-500 transition-colors">Edukasi</a></li>
-                    <li><a href="/diagnosa" class="hover:text-blue-500 transition-colors">Diagnosa</a></li>
+                    <li><a href="/educations" class="hover:text-blue-500 transition-colors">Edukasi</a></li>
+                    <li><a href="/detect" class="hover:text-blue-500 transition-colors">Kalkulator Deteksi</a></li>
                     <!-- Menu Admin (Hidden by default, shown via JS) -->
-                    <li id="nav-admin" class="hidden"><a href="/admin/dashboard" class="text-red-600 font-semibold hover:text-red-700 transition-colors">Admin</a></li>
+                    <li id="nav-admin" class="hidden"><a href="/admin/dashboard" class="text-red-600 font-semibold hover:text-red-700 transition-colors">Admin Dashboard</a></li>
+                    <!-- Menu User Dashboard (Hidden by default) -->
+                    <li id="nav-user-dashboard" class="hidden"><a href="/dashboard" class="text-blue-600 font-semibold hover:text-blue-700 transition-colors">Dashboard Saya</a></li>
                 </ul>
                 <div class="flex items-center space-x-3 border-l pl-6 border-gray-200">
                     <!-- Guest Menu -->

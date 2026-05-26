@@ -15,7 +15,7 @@ importers:
         specifier: ^2.1.1
         version: 2.1.2
       chart.js:
-        specifier: ^4.4.2
+        specifier: ^4.5.1
         version: 4.5.1
       sweetalert2:
         specifier: ^11.10.8

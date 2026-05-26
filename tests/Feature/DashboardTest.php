@@ -16,4 +16,15 @@ class DashboardTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewIs('dashboard.index');
     }
+
+    /**
+     * Test if admin dashboard page is accessible and returns the correct view.
+     */
+    public function test_admin_dashboard_is_accessible()
+    {
+        $response = $this->get('/admin/dashboard');
+
+        $response->assertStatus(200);
+        $response->assertViewIs('admin.dashboard');
+    }
 }

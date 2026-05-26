@@ -12,4 +12,9 @@ class AdminController extends Controller
         // melalui localStorage token & role, sehingga kita cukup merender view.
         return view('admin.dashboard');
     }
+
+    public function search(Request $request)
+    {
+        return view('admin.search');
+    }
 }

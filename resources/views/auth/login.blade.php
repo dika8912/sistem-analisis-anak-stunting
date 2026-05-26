@@ -195,10 +195,34 @@
                 body: params
             });
             
-            // Simpan token dan data user ke localStorage
+            // Simpan token ke localStorage
             localStorage.setItem('access_token', data.access_token);
-            // Fallback object safely in case backend doesn't return user info inside login
-            const userRole = (data.user && data.user.role) ? data.user.role : 'user';
+            
+            // Fungsi untuk men-decode JWT
+            function parseJwt(token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+                    return JSON.parse(jsonPayload);
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            const decodedToken = parseJwt(data.access_token);
+            
+            // Ambil role dari response (jika ada), atau dari JWT token payload (fallback standard)
+            const tokenRole = decodedToken ? (decodedToken.role || decodedToken.user_role) : null;
+            const tokenName = decodedToken ? (decodedToken.name || decodedToken.sub) : null;
+            
+            // Jika token tidak memiliki parameter role, kita cek dari username
+            const isUsernameAdmin = (username.toLowerCase() === 'admin') || (tokenName && tokenName.toLowerCase() === 'admin');
+            const fallbackRole = isUsernameAdmin ? 'admin' : 'user';
+
+            const userRole = (data.user && data.user.role) ? data.user.role : (tokenRole || fallbackRole);
             const userName = (data.user && data.user.name) ? data.user.name : username;
             
             localStorage.setItem('user_role', userRole);
@@ -207,7 +231,7 @@
             Swal.close();
 
             // Redirect sesuai role
-            if (data.user.role === 'admin') {
+            if (userRole === 'admin') {
                 window.location.href = '/admin/dashboard';
             } else {
                 window.location.href = '/dashboard';

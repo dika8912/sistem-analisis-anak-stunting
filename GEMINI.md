@@ -70,9 +70,13 @@ si-anting-frontend/
 │       │   └── create.blade.php        # Form tambah anak
 │       ├── measurements/
 │       │   └── create.blade.php        # Form tambah pengukuran
+│       ├── educations/
+│       │   ├── index.blade.php         # List artikel edukasi
+│       │   ├── show.blade.php          # Detail edukasi
+│       │   └── form.blade.php          # Form tambah/edit edukasi (Admin)
 │       └── admin/
 │           ├── dashboard.blade.php     # Dashboard statistik admin
-│           └── search.blade.php        # Pencarian by Nama & No. KK
+│           └── search.blade.php        # Pencarian by Nama & NIK
 ├── routes/
 │   └── web.php                         # Routing halaman Blade
 ├── .env                                # Konfigurasi environment
@@ -155,7 +159,11 @@ export async function apiFetch(endpoint, options = {}) {
 | `/children/{id}`       | `GET`     | `/api/children/{id}`       | user |
 | `/children/{id}`       | `GET`     | `/api/children/{id}/history`| user |
 | `/measurements/add`    | `POST`    | `/api/measurements`        | user |
-| `/admin/children`      | `GET`     | `/api/admin/children`      | admin|
+| `/educations`          | `GET`     | `/api/educations`          | -    |
+| `/educations/{id}`     | `GET`     | `/api/educations/{id}`     | -    |
+| `/admin/educations`    | `POST`    | `/api/admin/educations`    | admin|
+| `/admin/children`      | `GET`     | `/api/admin/children/search` | admin|
+| `/admin/children/{id}` | `PUT/DEL` | `/api/admin/children/{id}` | admin|
 
 ---
 
@@ -226,7 +234,8 @@ Di Tailwind v4, konfigurasi dilakukan langsung melalui file CSS (`resources/css/
 ### 7.3. Halaman Admin
 
 7. **`/admin/dashboard`** — Panel admin dengan statistik.
-8. **`/admin/children`** — Form pencarian `Nama Orang Tua` + `Nomor KK`. Menampilkan tabel hasil pencarian dari FastAPI secara dinamis.
+8. **`/admin/children`** — Form pencarian `Nama Orang Tua` + `NIK`. Menampilkan tabel hasil pencarian dari FastAPI secara dinamis.
+9. **`/admin/educations`** — Form manajemen konten edukasi gizi dan stunting (CRUD).
 
 ### 7.4. Grafik Pertumbuhan (Chart.js)
 Tampilkan grafik garis menggunakan **Chart.js** yang diinisialisasi melalui Vanilla JS:
@@ -246,7 +255,7 @@ APP_ENV=local
 APP_URL=http://localhost:8000
 
 # URL Backend FastAPI (Digunakan oleh JS Fetch API)
-VITE_API_URL=https://api-sianting.bilikku.my.id
+VITE_API_URL=http://localhost:5601
 ```
 
 ---
@@ -276,7 +285,8 @@ VITE_API_URL=https://api-sianting.bilikku.my.id
 - Form dengan validasi native JS, memanggil endpoint `/api/detect`.
 - Render UI hasil kalkulasi (WHO dan Prediksi ML) dan list rekomendasi gizi secara dinamis.
 
-### Fase 6: Fitur Admin
+### Fase 6: Fitur Admin & Edukasi
 - Layout khusus admin (`admin.blade.php`).
 - Proteksi route khusus role `admin`.
-- Pembuatan halaman pencarian data anak untuk verifikasi kesehatan oleh nakes.
+- Pembuatan halaman pencarian data anak (berdasarkan Nama/NIK) dan fitur update/delete data anak.
+- Pembuatan antarmuka Modul Edukasi untuk admin (CRUD) dan halaman baca untuk publik/user.
