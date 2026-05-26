@@ -16,7 +16,8 @@ Backend API untuk deteksi **Stunting** dan **Wasting** pada anak usia 0–60 bul
   - [Health Check](#health-check)
   - [Auth: Register](#auth-register)
   - [Auth: Login](#auth-login)
-  - [Deteksi Instan (tanpa simpan)](#deteksi-instan-tanpa-simpan)
+  - [Kalkulator Instan WHO (tanpa simpan)](#kalkulator-instan-who-tanpa-simpan)
+  - [Prediksi ML Instan (tanpa simpan)](#prediksi-ml-instan-tanpa-simpan)
   - [Simpan Pengukuran](#simpan-pengukuran)
   - [Profil Guardian Saya](#profil-guardian-saya)
   - [Tambah Anak](#tambah-anak)
@@ -370,13 +371,15 @@ Melakukan update password akun dengan menggunakan token valid dari proses forgot
 
 ---
 
-### Deteksi Instan (tanpa simpan)
+### Kalkulator Instan WHO (tanpa simpan)
+
+> **Catatan:** Fitur kalkulator instan dan prediksi instan ini dirancang untuk penggunaan anonim/publik sehingga **datanya tidak disimpan ke dalam histori**. Jika Anda ingin hasil perhitungannya tersimpan ke histori tumbuh kembang anak, gunakan endpoint [Simpan Pengukuran](#simpan-pengukuran) (`POST /api/measurements`).
 
 ```http
-POST /api/detect
+POST /api/calculate
 ```
 
-Melakukan **kalkulasi Z-Score WHO** dan **prediksi ML** secara instan tanpa menyimpan data ke database. Cocok untuk mode kalkulator / quick check.
+Melakukan **kalkulasi Z-Score WHO** secara instan tanpa menyimpan data ke database. Cocok untuk mode kalkulator kesehatan murni.
 
 **Auth:** Tidak diperlukan (Publik)
 
@@ -418,16 +421,44 @@ Melakukan **kalkulasi Z-Score WHO** dan **prediksi ML** secara instan tanpa meny
     "wasting_status_who": "normal",
     "underweight_status_who": "normal"
   },
+  "recommendations": [
+    "Berikan makanan kaya protein hewani seperti telur, ikan, dan susu.",
+    "Lanjutkan pemantauan tumbuh kembang bulanan di Posyandu."
+  ]
+}
+```
+
+---
+
+### Prediksi ML Instan (tanpa simpan)
+
+```http
+POST /api/predict
+```
+
+Melakukan **prediksi Machine Learning** berbasis model Random Forest tanpa menyimpan data. Digunakan untuk mendapatkan *second opinion* berbasis data historis.
+
+**Auth:** Tidak diperlukan (Publik)
+
+**Content-Type:** `application/json`
+
+**Request Body:** (Sama seperti `/api/calculate`)
+
+**Response `200 OK`:**
+```json
+{
+  "input": {
+    "gender": "M",
+    "age_in_months": 24,
+    "height_cm": 85.5,
+    "weight_kg": 12.1
+  },
   "ml_prediction": {
     "stunting_status_ml": "normal",
     "stunting_confidence": 0.9400,
     "wasting_status_ml": "normal",
     "wasting_confidence": 0.8800
-  },
-  "recommendations": [
-    "Berikan makanan kaya protein hewani seperti telur, ikan, dan susu.",
-    "Lanjutkan pemantauan tumbuh kembang bulanan di Posyandu."
-  ]
+  }
 }
 ```
 
@@ -453,7 +484,7 @@ Melakukan **kalkulasi Z-Score WHO** dan **prediksi ML** secara instan tanpa meny
 POST /api/measurements
 ```
 
-Menyimpan data pengukuran fisik anak ke database, kemudian secara otomatis menghitung Z-Score WHO dan prediksi ML, lalu menyimpan hasilnya.
+Menyimpan data pengukuran fisik anak ke database, yang mana akan **otomatis menghitung Z-Score WHO dan prediksi ML di balik layar**, lalu menyimpan hasilnya untuk membentuk **Histori Pengukuran Anak**.
 
 **Auth:** ✅ Wajib (`user` atau `admin`)
 
