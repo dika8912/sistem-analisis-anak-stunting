@@ -867,11 +867,9 @@ class TestWeirdScenarios:
 
     def test_ml_prediction_without_model(self):
         """Prediksi tanpa model yang di-load → return status 'model_not_trained'"""
-        fake_service = MLPredictionService.__new__(MLPredictionService)
-        fake_service.stunting_model = None
-        fake_service.wasting_model = None
+        # Gunakan path yang tidak ada agar model gagal diload
+        fake_service = MLPredictionService(models_dir="/path/to/nowhere")
         result = fake_service.predict("M", 12, 75.0, 9.0)
-
         assert result["stunting_confidence"] == 0.0
 
 

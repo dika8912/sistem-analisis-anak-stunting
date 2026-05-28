@@ -15,15 +15,21 @@ class MLPredictionService:
         self.wasting_model = None
         
         # Proactively load models if they exist
-        if os.path.exists(self.stunting_model_path):
+        self._load_models_if_needed()
+
+    def _load_models_if_needed(self):
+        """Lazy load models if they were created after initialization (e.g. by auto-train)."""
+        if not self.stunting_model and os.path.exists(self.stunting_model_path):
             self.stunting_model = joblib.load(self.stunting_model_path)
-        if os.path.exists(self.wasting_model_path):
+        if not self.wasting_model and os.path.exists(self.wasting_model_path):
             self.wasting_model = joblib.load(self.wasting_model_path)
 
     def predict(self, gender: str, age_months: int, height_cm: float, weight_kg: float) -> dict:
         """
         Predicts stunting and wasting status with confidence scores.
         """
+        self._load_models_if_needed()
+        
         if not self.stunting_model or not self.wasting_model:
             return {
                 "stunting_status_ml": "model_not_trained",
