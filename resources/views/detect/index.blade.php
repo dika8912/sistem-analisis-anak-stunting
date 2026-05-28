@@ -206,28 +206,44 @@
             loadingState.classList.add('flex');
 
             try {
-                // Request ke FastAPI Endpoint /api/detect
-                // Endpoint ini publik, jadi tidak perlu token (opsional). Jika butuh token, `apiFetch` akan mengurusnya.
-                // Jika ingin mengirim tanpa token, kita bisa gunakan fetch biasa.
-                // Menggunakan fetch biasa ke VITE_API_URL:
                 const API_BASE = '{{ env("VITE_API_URL", "http://localhost:5601") }}';
                 
-                const response = await fetch(`${API_BASE}/api/detect`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        age_months: age_months,
-                        gender: gender,
-                        height: height,
-                        weight: weight
-                    })
-                });
+                // Konversi payload sesuai dengan dokumentasi API
+                const apiPayload = {
+                    gender: gender === 'L' ? 'M' : 'F',
+                    age_in_months: age_months,
+                    height_cm: height,
+                    weight_kg: weight
+                };
 
-                if (!response.ok) {
+                // Panggil endpoint calculate (WHO) dan predict (ML) secara bersamaan
+                const [calcResponse, predResponse] = await Promise.all([
+                    fetch(`${API_BASE}/api/calculate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(apiPayload)
+                    }),
+                    fetch(`${API_BASE}/api/predict`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(apiPayload)
+                    })
+                ]);
+
+                if (!calcResponse.ok || !predResponse.ok) {
                     throw new Error('Gagal memanggil API Deteksi');
                 }
 
-                const result = await response.json();
+                const calcData = await calcResponse.json();
+                const predData = await predResponse.json();
+
+                // Gabungkan hasil sesuai format yang diharapkan oleh renderResult
+                const result = {
+                    z_score: calcData.who_calculation.haz_zscore,
+                    status: calcData.who_calculation.stunting_status_who,
+                    ml_prediction: predData.ml_prediction.stunting_status_ml,
+                    recommendations: calcData.recommendations
+                };
 
                 // Format & Tampilkan Hasil
                 renderResult(result, { age_months, gender, height, weight });
@@ -260,9 +276,16 @@
             const recommendationsNode = document.getElementById('resultRecommendations');
 
             // Set Data
-            const zScore = data.z_score !== undefined ? parseFloat(data.z_score).toFixed(2) : '0.00';
+            const zScore = (data.z_score !== undefined && data.z_score !== null) ? parseFloat(data.z_score).toFixed(2) : '0.00';
             const status = data.status || 'Tidak Diketahui';
-            const mlPrediction = data.ml_prediction || 'Tidak Ada Data ML';
+            let mlPrediction = data.ml_prediction || 'Tidak Ada Data ML';
+
+            // Rapikan teks 'model_not_trained' dari backend
+            if (mlPrediction === 'model_not_trained') {
+                mlPrediction = 'Model Belum Dilatih';
+            } else if (mlPrediction === 'normal') {
+                mlPrediction = 'Normal (Aman)';
+            }
 
             zScoreNode.innerText = zScore;
             statusNode.innerText = status;

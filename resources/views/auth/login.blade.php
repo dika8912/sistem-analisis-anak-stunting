@@ -192,7 +192,7 @@
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: params
+                body: params.toString()
             });
             
             // Simpan token ke localStorage
