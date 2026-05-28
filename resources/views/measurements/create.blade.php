@@ -64,20 +64,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Proteksi role admin
-        const role = localStorage.getItem('user_role');
-        if (role !== 'admin') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Akses Ditolak',
-                text: 'Hanya admin yang dapat menambahkan pengukuran.',
-            }).then(() => {
-                const childId = document.getElementById('child_id').value;
-                window.location.href = `/children/${childId}`;
-            });
-            return;
-        }
-
         // Set default date to today
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('measurement_date').value = today;
@@ -103,10 +89,10 @@
                 await window.apiFetch('/api/measurements', {
                     method: 'POST',
                     body: JSON.stringify({
-                        child_id: parseInt(child_id),
+                        child_id: child_id, // UUID string
                         height: parseFloat(height),
                         weight: parseFloat(weight),
-                        measurement_date: measurement_date
+                        measured_at: measurement_date // Sesuai dokumentasi backend
                     })
                 });
 
