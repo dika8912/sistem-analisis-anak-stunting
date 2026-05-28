@@ -332,7 +332,7 @@
             // Rekomendasi (Dummy atau dari API jika ada)
             let recs = data.recommendations || [];
             if (recs.length === 0) {
-                if (statusLower.includes('normal')) {
+                if (statusRaw.includes('normal')) {
                     recs = [
                         "Pertahankan pola makan bergizi seimbang (4 sehat 5 sempurna).",
                         "Rutin mengecek tinggi dan berat badan anak setiap bulan.",
