@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from stunting_app.api.endpoints import router as api_router
 from stunting_app.api.auth import router as auth_router
 from stunting_app.config.settings import settings
@@ -57,6 +58,20 @@ app = FastAPI(
     description="Backend API for WHO and ML based Stunting and Wasting Classification with RBAC",
     version="1.0.0",
     lifespan=lifespan
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CORS Middleware
+# Konfigurasi origins di .env: CORS_ORIGINS=https://domain1.com,https://domain2.com
+# ─────────────────────────────────────────────────────────────────────────────
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth_router, prefix="/api/auth", tags=["Authentication"])

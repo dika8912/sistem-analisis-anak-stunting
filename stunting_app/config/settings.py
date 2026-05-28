@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 days
 
+    # CORS Settings
+    # Isi di .env: CORS_ORIGINS=https://sianting.bilikku.my.id,https://www.sianting.bilikku.my.id
+    CORS_ORIGINS: str = "https://sianting.bilikku.my.id,https://www.sianting.bilikku.my.id,http://localhost,http://localhost:8000,http://127.0.0.1:8000"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
