@@ -1,6 +1,7 @@
 import pandas as pd
 # pyrefly: ignore [missing-import]
 import numpy as np
+import sys
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
@@ -8,6 +9,26 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 import joblib
 import os
+
+# Mapping label dataset -> label sistem (snake_case, sesuai spec GEMINI.md dan WHO)
+STUNTING_LABEL_MAP = {
+    'Normal': 'normal',
+    'Stunted': 'stunted',
+    'Severely Stunted': 'severely_stunted',
+    'Tall': 'tall',
+}
+
+WASTING_LABEL_MAP = {
+    'Normal weight': 'normal',
+    'Normal Weight': 'normal',
+    'Risk of Overweight': 'overweight',
+    'Overweight': 'overweight',
+    'Obese': 'obese',
+    'Underweight': 'wasted',
+    'Severely Underweight': 'severely_wasted',
+    'Wasted': 'wasted',
+    'Severely Wasted': 'severely_wasted',
+}
 
 def train_models(csv_path: str, output_dir: str):
     # 1. Load Dataset
@@ -31,8 +52,25 @@ def train_models(csv_path: str, output_dir: str):
 
     # 2. Features and Targets
     X = df[['jenis_kelamin', 'umur', 'tinggi', 'berat']]
-    y_stunting = df['stunting']
-    y_wasting = df['wasting']
+    
+    # Normalisasi label ke format snake_case yang konsisten dengan sistem
+    y_stunting = df['stunting'].map(STUNTING_LABEL_MAP)
+    y_wasting = df['wasting'].map(WASTING_LABEL_MAP)
+    
+    # Validasi: pastikan tidak ada label yang tidak dikenali
+    unknown_stunting = df['stunting'][y_stunting.isna()].unique()
+    unknown_wasting = df['wasting'][y_wasting.isna()].unique()
+    if len(unknown_stunting) > 0:
+        print(f"[WARNING] Label stunting tidak dikenali (akan diabaikan): {unknown_stunting}")
+        valid_mask = y_stunting.notna() & y_wasting.notna()
+        X = X[valid_mask]
+        y_stunting = y_stunting[valid_mask]
+        y_wasting = y_wasting[valid_mask]
+    if len(unknown_wasting) > 0:
+        print(f"[WARNING] Label wasting tidak dikenali (akan diabaikan): {unknown_wasting}")
+    
+    print(f"Label stunting unik: {sorted(y_stunting.unique())}")
+    print(f"Label wasting unik: {sorted(y_wasting.unique())}")
 
     # 3. Define Preprocessing Pipeline
     # Encode 'jenis_kelamin' (Laki-laki -> 1, Perempuan -> 0) based on typical datasets or mapping
