@@ -156,6 +156,7 @@
                         <input type="hidden" name="weight" id="pdf_weight">
                         <input type="hidden" name="z_score" id="pdf_zscore">
                         <input type="hidden" name="status" id="pdf_status">
+                        <input type="hidden" name="status_raw" id="pdf_status_raw">
                         <input type="hidden" name="ml_prediction" id="pdf_ml">
 
                         <button type="submit" class="w-full flex items-center justify-center py-4 px-4 border-2 border-gray-900 rounded-xl text-sm font-bold text-gray-900 bg-white hover:bg-gray-900 hover:text-white focus:outline-none transition-colors">
@@ -275,17 +276,28 @@
             const iconNode = document.getElementById('resultIcon');
             const recommendationsNode = document.getElementById('resultRecommendations');
 
+            // Map semua label snake_case dari backend -> teks Indonesia yang ramah pengguna
+            const STATUS_LABEL_MAP = {
+                'normal':               'Normal',
+                'stunted':              'Pendek (Stunted)',
+                'severely_stunted':     'Sangat Pendek (Severely Stunted)',
+                'tall':                 'Tinggi (Tall)',
+                'wasted':               'Kurus (Wasted)',
+                'severely_wasted':      'Sangat Kurus (Severely Wasted)',
+                'overweight':           'Kelebihan Berat Badan',
+                'obese':                'Obesitas',
+                'risk_of_overweight':   'Berisiko Kelebihan Berat Badan',
+                'underweight':          'Berat Badan Kurang',
+                'severely_underweight': 'Berat Badan Sangat Kurang',
+                'model_not_trained':    'Prediksi ML Tidak Tersedia',
+            };
+
             // Set Data
             const zScore = (data.z_score !== undefined && data.z_score !== null) ? parseFloat(data.z_score).toFixed(2) : '0.00';
-            const status = data.status || 'Tidak Diketahui';
-            let mlPrediction = data.ml_prediction || 'Tidak Ada Data ML';
-
-            // Rapikan teks 'model_not_trained' dari backend
-            if (mlPrediction === 'model_not_trained') {
-                mlPrediction = 'Model Belum Dilatih';
-            } else if (mlPrediction === 'normal') {
-                mlPrediction = 'Normal (Aman)';
-            }
+            const statusRaw = data.status || 'Tidak Diketahui';
+            const status = STATUS_LABEL_MAP[statusRaw] || statusRaw;
+            const mlRaw = data.ml_prediction || 'model_not_trained';
+            const mlPrediction = STATUS_LABEL_MAP[mlRaw] || mlRaw;
 
             zScoreNode.innerText = zScore;
             statusNode.innerText = status;
@@ -295,23 +307,23 @@
             let bgColorClass = 'bg-gray-600';
             let iconClass = 'ph-info';
 
-            const statusLower = status.toLowerCase();
-            if (statusLower.includes('severely') || statusLower.includes('sangat pendek')) {
-                bgColorClass = 'bg-red-600';
-                iconClass = 'ph-warning';
-            } else if (statusLower.includes('stunted') || statusLower.includes('pendek')) {
-                bgColorClass = 'bg-orange-500';
-                iconClass = 'ph-warning-circle';
-            } else if (statusLower.includes('normal')) {
-                bgColorClass = 'bg-emerald-500';
-                iconClass = 'ph-check-circle';
-            } else if (statusLower.includes('risk') || statusLower.includes('berisiko')) {
-                bgColorClass = 'bg-yellow-500';
-                iconClass = 'ph-shield-warning';
-            } else if (statusLower.includes('tall') || statusLower.includes('tinggi')) {
-                bgColorClass = 'bg-blue-500';
-                iconClass = 'ph-arrow-up';
-            }
+            // Gunakan statusRaw (snake_case) untuk pencocokan warna agar akurat
+            const STATUS_THEME = {
+                'severely_stunted':     { bg: 'bg-red-600',     icon: 'ph-warning' },
+                'severely_wasted':      { bg: 'bg-red-600',     icon: 'ph-warning' },
+                'severely_underweight': { bg: 'bg-red-600',     icon: 'ph-warning' },
+                'stunted':              { bg: 'bg-orange-500',  icon: 'ph-warning-circle' },
+                'wasted':               { bg: 'bg-orange-500',  icon: 'ph-warning-circle' },
+                'underweight':          { bg: 'bg-orange-500',  icon: 'ph-warning-circle' },
+                'normal':               { bg: 'bg-emerald-500', icon: 'ph-check-circle' },
+                'risk_of_overweight':   { bg: 'bg-yellow-500',  icon: 'ph-shield-warning' },
+                'overweight':           { bg: 'bg-amber-500',   icon: 'ph-trend-up' },
+                'obese':                { bg: 'bg-red-500',     icon: 'ph-trend-up' },
+                'tall':                 { bg: 'bg-blue-500',    icon: 'ph-arrow-up' },
+            };
+            const theme = STATUS_THEME[statusRaw] || { bg: 'bg-gray-600', icon: 'ph-info' };
+            bgColorClass = theme.bg;
+            iconClass = theme.icon;
 
             // Ganti warna header
             headerNode.className = `px-8 py-10 text-center text-white transition-colors duration-500 ${bgColorClass}`;
@@ -350,6 +362,7 @@
             document.getElementById('pdf_zscore').value = zScore;
             document.getElementById('pdf_status').value = status;
             document.getElementById('pdf_ml').value = mlPrediction;
+            document.getElementById('pdf_status_raw').value = statusRaw;
         }
     });
 </script>

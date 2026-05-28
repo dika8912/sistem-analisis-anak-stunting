@@ -101,39 +101,51 @@
                 childrenGrid.classList.add('grid');
 
                 children.forEach(child => {
-                    // Logic penentuan warna status (menggunakan CSS variables yang diset di app.css)
-                    let statusColor = 'bg-gray-100 text-gray-700';
-                    let statusIcon = 'ph-info';
-                    
-                    if (child.status === 'Normal') {
-                        statusColor = 'bg-green-100 text-green-700';
-                        statusIcon = 'ph-check-circle';
-                    } else if (child.status === 'Stunting') {
-                        statusColor = 'bg-orange-100 text-orange-700';
-                        statusIcon = 'ph-warning-circle';
-                    } else if (child.status === 'Severely Stunted') {
-                        statusColor = 'bg-red-100 text-red-700';
-                        statusIcon = 'ph-warning';
-                    }
+                    // Map snake_case status dari API -> label Indonesia & warna UI
+                    const STATUS_LABEL_MAP = {
+                        'normal':               'Normal',
+                        'stunted':              'Pendek (Stunted)',
+                        'severely_stunted':     'Sangat Pendek',
+                        'tall':                 'Tinggi',
+                        'wasted':               'Kurus',
+                        'severely_wasted':      'Sangat Kurus',
+                        'overweight':           'Kelebihan BB',
+                        'obese':                'Obesitas',
+                        'risk_of_overweight':   'Berisiko Gemuk',
+                        'underweight':          'BB Kurang',
+                        'severely_underweight': 'BB Sangat Kurang',
+                    };
+
+                    const STATUS_THEME = {
+                        'normal':               { color: 'bg-green-100 text-green-700',  icon: 'ph-check-circle',   border: 'bg-green-500' },
+                        'stunted':              { color: 'bg-orange-100 text-orange-700', icon: 'ph-warning-circle', border: 'bg-orange-500' },
+                        'severely_stunted':     { color: 'bg-red-100 text-red-700',      icon: 'ph-warning',        border: 'bg-red-600' },
+                        'wasted':               { color: 'bg-orange-100 text-orange-700', icon: 'ph-warning-circle', border: 'bg-orange-500' },
+                        'severely_wasted':      { color: 'bg-red-100 text-red-700',      icon: 'ph-warning',        border: 'bg-red-600' },
+                        'risk_of_overweight':   { color: 'bg-yellow-100 text-yellow-700', icon: 'ph-shield-warning', border: 'bg-yellow-500' },
+                        'overweight':           { color: 'bg-amber-100 text-amber-700',  icon: 'ph-trend-up',       border: 'bg-amber-500' },
+                        'obese':                { color: 'bg-red-100 text-red-700',      icon: 'ph-trend-up',       border: 'bg-red-500' },
+                        'tall':                 { color: 'bg-blue-100 text-blue-700',    icon: 'ph-arrow-up',       border: 'bg-blue-500' },
+                        'underweight':          { color: 'bg-orange-100 text-orange-700', icon: 'ph-warning-circle', border: 'bg-orange-500' },
+                        'severely_underweight': { color: 'bg-red-100 text-red-700',      icon: 'ph-warning',        border: 'bg-red-600' },
+                    };
+
+                    const statusRaw = child.status || '';
+                    const statusLabel = STATUS_LABEL_MAP[statusRaw] || (statusRaw ? statusRaw : 'Belum dicek');
+                    const theme = STATUS_THEME[statusRaw] || { color: 'bg-gray-100 text-gray-700', icon: 'ph-info', border: 'bg-gray-300' };
 
                     const card = document.createElement('div');
                     card.className = 'bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative group overflow-hidden';
-                    
-                    // Aksen warna sisi kiri berdasarkan status
-                    let borderAccent = 'bg-gray-300';
-                    if (child.status === 'Normal') borderAccent = 'bg-green-500';
-                    else if (child.status === 'Stunting') borderAccent = 'bg-orange-500';
-                    else if (child.status === 'Severely Stunted') borderAccent = 'bg-red-500';
 
                     card.innerHTML = `
-                        <div class="absolute left-0 top-0 bottom-0 w-1 ${borderAccent}"></div>
+                        <div class="absolute left-0 top-0 bottom-0 w-1 ${theme.border}"></div>
                         <div class="flex items-start justify-between mb-4">
                             <div class="h-12 w-12 bg-blue-50 rounded-full flex items-center justify-center">
                                 <i class="ph ph-baby text-2xl text-blue-600"></i>
                             </div>
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusColor}">
-                                <i class="ph ${statusIcon} mr-1"></i>
-                                ${child.status || 'Belum dicek'}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${theme.color}">
+                                <i class="ph ${theme.icon} mr-1"></i>
+                                ${statusLabel}
                             </span>
                         </div>
                         <h3 class="text-lg font-bold text-gray-900 mb-1 truncate" title="${child.name}">${child.name}</h3>

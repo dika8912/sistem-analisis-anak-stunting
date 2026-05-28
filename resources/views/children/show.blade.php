@@ -7,7 +7,7 @@
             <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight" id="childName">Memuat...</h1>
             <p class="text-gray-500 mt-1">Detail Profil dan Riwayat Pertumbuhan Anak</p>
         </div>
-        <div id="adminActionContainer" class="hidden">
+        <div id="adminActionContainer">
             <a href="/measurements/create?child_id={{ $id }}" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-md text-sm font-bold text-white hover:from-emerald-600 hover:to-teal-700 focus:outline-none transform transition-all hover:-translate-y-0.5">
                 <i class="ph ph-plus-circle text-lg mr-2"></i> Tambah Pengukuran
             </a>
@@ -117,13 +117,8 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        const childId = {{ $id }};
+        const childId = '{{ $id }}'; // Menggunakan string untuk UUID
         const role = localStorage.getItem('user_role');
-        
-        // Hanya tampilkan tombol tambah jika admin
-        if (role === 'admin') {
-            document.getElementById('adminActionContainer').classList.remove('hidden');
-        }
 
         let childData = null;
         let historyData = [];
@@ -166,15 +161,43 @@
             }
         };
 
+        // Map label snake_case -> teks Indonesia
+        const STATUS_LABEL_MAP = {
+            'normal':               'Normal',
+            'stunted':              'Pendek (Stunted)',
+            'severely_stunted':     'Sangat Pendek',
+            'tall':                 'Tinggi (Tall)',
+            'wasted':               'Kurus (Wasted)',
+            'severely_wasted':      'Sangat Kurus',
+            'overweight':           'Kelebihan BB',
+            'obese':                'Obesitas',
+            'risk_of_overweight':   'Berisiko Kelebihan BB',
+            'underweight':          'BB Kurang',
+            'severely_underweight': 'BB Sangat Kurang',
+            'model_not_trained':    'ML Tidak Tersedia',
+        };
+
+        // Map label snake_case -> kelas Tailwind warna
+        const STATUS_COLOR_MAP = {
+            'normal':               'bg-emerald-100 text-emerald-800 border-emerald-200',
+            'stunted':              'bg-orange-100 text-orange-800 border-orange-200',
+            'severely_stunted':     'bg-red-100 text-red-800 border-red-200',
+            'tall':                 'bg-blue-100 text-blue-800 border-blue-200',
+            'wasted':               'bg-orange-100 text-orange-800 border-orange-200',
+            'severely_wasted':      'bg-red-100 text-red-800 border-red-200',
+            'risk_of_overweight':   'bg-yellow-100 text-yellow-800 border-yellow-200',
+            'overweight':           'bg-amber-100 text-amber-800 border-amber-200',
+            'obese':                'bg-red-100 text-red-800 border-red-200',
+            'underweight':          'bg-orange-100 text-orange-800 border-orange-200',
+            'severely_underweight': 'bg-red-100 text-red-800 border-red-200',
+        };
+
         const getStatusColor = (status) => {
-            status = (status || '').toLowerCase();
-            if (status.includes('severely') || status.includes('sangat pendek')) return 'bg-red-100 text-red-800 border-red-200';
-            if (status.includes('stunted') || status.includes('pendek')) return 'bg-orange-100 text-orange-800 border-orange-200';
-            if (status.includes('normal')) return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-            if (status.includes('risk') || status.includes('berisiko')) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            if (status.includes('overweight')) return 'bg-purple-100 text-purple-800 border-purple-200';
-            if (status.includes('tall') || status.includes('tinggi')) return 'bg-blue-100 text-blue-800 border-blue-200';
-            return 'bg-gray-100 text-gray-800 border-gray-200'; // default
+            return STATUS_COLOR_MAP[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+        };
+
+        const getStatusLabel = (status) => {
+            return STATUS_LABEL_MAP[status] || (status ? status : '-');
         };
 
         const renderLatestMeasurement = () => {
@@ -195,7 +218,7 @@
                     <div>
                         <p class="text-sm text-gray-500 mb-1">Status Z-Score (Tinggi/Umur)</p>
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${statusClass}">
-                            ${latest.stunting_status || 'Belum dianalisa'}
+                            ${getStatusLabel(latest.stunting_status)}
                         </span>
                     </div>
                     <div class="text-right">
@@ -248,7 +271,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(item.stunting_status)}">
-                            ${item.stunting_status || '-'}
+                            ${getStatusLabel(item.stunting_status)}
                         </span>
                     </td>
                 </tr>
