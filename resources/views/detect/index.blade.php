@@ -120,6 +120,7 @@
                     </div>
                     <h3 class="text-sm uppercase tracking-widest font-bold mb-1 opacity-80">Status Gizi</h3>
                     <h2 id="resultStatus" class="text-4xl font-black mb-2">Normal</h2>
+                    <p id="resultBMIHeader" class="text-lg font-medium opacity-90 mt-2"></p>
                 </div>
 
                 <!-- Konten Detail -->
@@ -299,8 +300,13 @@
             const mlRaw = data.ml_prediction || 'model_not_trained';
             const mlPrediction = STATUS_LABEL_MAP[mlRaw] || mlRaw;
 
+            // Hitung BMI
+            const height_m = inputs.height / 100;
+            const bmi = height_m > 0 ? (inputs.weight / (height_m * height_m)).toFixed(2) : '0.00';
+
             zScoreNode.innerText = zScore;
             statusNode.innerText = status;
+            document.getElementById('resultBMIHeader').innerText = `IMT / BMI: ${bmi} kg/m²`;
             mlNode.innerText = mlPrediction;
 
             // Tema Warna berdasarkan Status

@@ -115,6 +115,14 @@
                 <td>Berat Badan</td>
                 <td>: {{ $weight }} kg</td>
             </tr>
+            @php
+                $height_m = $height / 100;
+                $bmi = ($height_m > 0) ? $weight / ($height_m * $height_m) : 0;
+            @endphp
+            <tr>
+                <td>Indeks Massa Tubuh (IMT / BMI)</td>
+                <td>: {{ number_format($bmi, 2) }} kg/m²</td>
+            </tr>
         </table>
     </div>
 
@@ -145,6 +153,16 @@
 
             <div class="disclaimer">
                 *Catatan: Laporan ini adalah hasil simulasi algoritma (Kalkulator Gizi) dan tidak dapat menggantikan diagnosis medis resmi. Harap konsultasikan dengan dokter atau bidan untuk memastikan kesehatan anak Anda.
+            </div>
+            
+            <div style="margin-top: 30px; text-align: center;">
+                <p style="color: #4B5563; font-weight: bold; margin-bottom: 10px;">Grafik Referensi BMI (WHO)</p>
+                @if($gender == 'L')
+                    <img src="{{ public_path('images/bmi-boys.png') }}" alt="Grafik BMI Laki-laki" style="width: 100%; max-width: 500px; border: 1px solid #E5E7EB; border-radius: 4px;">
+                @else
+                    <img src="{{ public_path('images/bmi-girls.png') }}" alt="Grafik BMI Perempuan" style="width: 100%; max-width: 500px; border: 1px solid #E5E7EB; border-radius: 4px;">
+                @endif
+                <p style="font-size: 11px; color: #9CA3AF; margin-top: 5px;">*Kurva pertumbuhan BMI-for-Age berdasarkan standar WHO.</p>
             </div>
         </div>
     </div>
