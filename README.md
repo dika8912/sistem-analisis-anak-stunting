@@ -1,4 +1,23 @@
 # 🩺 Stunting Detection System API
+Sistem kalkulasi berat badan sesuai standar dari BMI (Indeks Berat Badan) menggunakan laravel dan python. 
+
+#Dokumentasi Sistem 
+<img width="1343" height="922" alt="Screenshot 2026-06-10 092822" src="https://github.com/user-attachments/assets/5ad05b06-b83d-410d-9226-93d394a19cd0" /> Untuk halaman dashboard admin 
+
+<img width="1287" height="920" alt="Screenshot 2026-06-10 092840" src="https://github.com/user-attachments/assets/5b068dd1-74a3-4e8d-b6a2-854949cac8c0" />  Halaman pusat edukasi stunting 
+
+<img width="1253" height="922" alt="Screenshot 2026-06-10 092901" src="https://github.com/user-attachments/assets/d6067e1e-7a3d-43cc-be6d-a8dd56b1936f" /> Halaman tambah data anak 
+
+<img width="1108" height="923" alt="Screenshot 2026-06-10 092952" src="https://github.com/user-attachments/assets/df3ccb0f-c991-462b-b337-9b46f11a87ca" /> Halaman Register
+
+<img width="1478" height="923" alt="Screenshot 2026-06-10 092752" src="https://github.com/user-attachments/assets/d5f13170-f8d2-49d5-b750-b124c1370ae1" />  Halaman login 
+
+<img width="876" height="877" alt="Screenshot 2026-06-10 092712" src="https://github.com/user-attachments/assets/5196130c-31a5-4de1-b662-6b8f2562ee62" />
+
+<img width="881" height="886" alt="Screenshot 2026-06-10 092703" src="https://github.com/user-attachments/assets/fb7fdc68-be7e-414d-ab93-71ccf50392d5" />   Halaman cetak pdf laporan dari deteksi 
+
+<img width="1442" height="920" alt="Screenshot 2026-06-10 092638" src="https://github.com/user-attachments/assets/687ae036-2ee8-43b2-98a7-c602ebd6a31f" />  Halaman Kalkulator deteksi 
+
 
 Backend API untuk deteksi **Stunting** dan **Wasting** pada anak usia 0–60 bulan berbasis perhitungan **WHO Z-Score (LMS)** dan prediksi **Machine Learning (Random Forest)**. Dilengkapi dengan sistem autentikasi **JWT** dan **Role-Based Access Control (RBAC)**.
 
