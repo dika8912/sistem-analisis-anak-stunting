@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # CORS Settings
     # Isi di .env: CORS_ORIGINS=https://sianting.bilikku.my.id,https://www.sianting.bilikku.my.id
-    CORS_ORIGINS: str = "https://sianting.bilikku.my.id,https://www.sianting.bilikku.my.id,http://localhost,http://localhost:8000,http://127.0.0.1:8000"
+    CORS_ORIGINS: str = "http://sianting.ct.ws,https://sianting.ct.ws,https://sianting.bilikku.my.id,https://www.sianting.bilikku.my.id,http://localhost,http://localhost:8000,http://127.0.0.1:8000,*"
 
     model_config = SettingsConfigDict(
         env_file=os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.env")),

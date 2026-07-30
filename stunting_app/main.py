@@ -64,11 +64,13 @@ app = FastAPI(
 # CORS Middleware
 # Konfigurasi origins di .env: CORS_ORIGINS=https://domain1.com,https://domain2.com
 # ─────────────────────────────────────────────────────────────────────────────
-_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip() and o.strip() != "*"]
+_allow_all = "*" in [o.strip() for o in settings.CORS_ORIGINS.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=_cors_origins if not _allow_all else ["*"],
+    allow_origin_regex=".*" if _allow_all else None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
