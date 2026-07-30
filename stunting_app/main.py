@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 def _ensure_models_trained():
     """Auto-train ML models on startup if model files are missing."""
-    stunting_path = os.path.join(settings.MODELS_DIR, 'stunting_classifier.joblib')
-    wasting_path  = os.path.join(settings.MODELS_DIR, 'wasting_classifier.joblib')
+    stunting_path = os.path.join(settings.MODELS_DIR, 'stunting_model.joblib')
+    wasting_path  = os.path.join(settings.MODELS_DIR, 'wasting_model.joblib')
 
     if os.path.exists(stunting_path) and os.path.exists(wasting_path):
         logger.info("ML models already exist — skipping auto-training.")

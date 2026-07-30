@@ -5,8 +5,8 @@ import joblib
 from stunting_app.config.settings import settings
 from stunting_app.services.ml_prediction_service import MLPredictionService
 
-m = joblib.load(settings.MODELS_DIR + '/stunting_classifier.joblib')
-w = joblib.load(settings.MODELS_DIR + '/wasting_classifier.joblib')
+m = joblib.load(settings.MODELS_DIR + '/stunting_model.joblib')
+w = joblib.load(settings.MODELS_DIR + '/wasting_model.joblib')
 print('Stunting classes (baru):', m.classes_)
 print('Wasting classes (baru):', w.classes_)
 print()
