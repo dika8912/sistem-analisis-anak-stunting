@@ -89,6 +89,24 @@ graph TD
    `https://si-anting-api.onrender.com`
 7. Buka browser dan coba kunjungi `https://si-anting-api.onrender.com/docs` untuk memastikan Swagger UI API sudah online.
 
+### 💡 Alternatif Hosting Backend 100% Gratis Tanpa Kartu Kredit (Hugging Face Spaces & Koyeb)
+Jika akun Render.com Anda tetap meminta verifikasi kartu kredit, silakan gunakan alternatif berikut yang **100% GRATIS selamanya tanpa kartu kredit**:
+
+#### A. Opsi 1: Hugging Face Spaces (Sangat Direkomendasikan untuk AI/Python)
+1. Daftar akun gratis di **[huggingface.co/join](https://huggingface.co/join)** (hanya menggunakan email).
+2. Setelah login, klik foto profil di pojok kanan atas → **New Space**.
+3. Isi **Space name:** `si-anting-api`, lalu pada pilihan **Space SDK**, pilih **Docker** (Blank).
+4. Klik **Create Space**.
+5. Di halaman Space baru Anda, sambungkan dengan repositori GitHub backend ini (atau upload file backend termasuk file `Dockerfile` yang sudah disediakan).
+6. Di menu **Settings > Variables and secrets**, tambahkan `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, dan `JWT_SECRET` pada bagian **Secrets**.
+7. Space akan otomatis berstatus **Running** dan Anda akan mendapatkan URL produksi gratis (misal: `https://username-si-anting-api.hf.space`).
+
+#### B. Opsi 2: Koyeb.com (1 Free Web Service Tanpa Kartu Kredit)
+1. Daftar menggunakan akun GitHub Anda di **[koyeb.com](https://www.koyeb.com/)**.
+2. Klik **Create Service** → Pilih **GitHub** → Pilih repositori Backend Anda.
+3. Koyeb akan otomatis membaca `Dockerfile` yang telah disediakan.
+4. Masukkan Environment Variables MySQL Aiven Anda, pilih paket **Free ($0)**, dan klik **Deploy**!
+
 ---
 
 ## 🎨 4. Langkah 3: Persiapan & Build Frontend Laravel (di Komputer Lokal)
