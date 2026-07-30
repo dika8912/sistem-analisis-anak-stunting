@@ -2,21 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, distinct, or_
 from sqlalchemy.orm import selectinload
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import math
 
 from stunting_app.core.database import get_db_session
 from stunting_app.config.settings import settings
 from stunting_app.schemas.schemas import (
-    CalculateRequest, CalculateResponse, PredictRequest, PredictResponse, WHOCalculationResponse, MLPredictionResponse,
+    CalculateRequest, CalculateResponse, PredictRequest, PredictResponse, MLPredictionResponse,
     MeasurementCreateRequest, MeasurementResponse, GuardianResponse, ChildResponse,
     ChildCreateRequest, ChildUpdateRequest, EducationResponse, EducationCreateRequest, EducationUpdateRequest,
     AdminStatsResponse
 )
 from stunting_app.services.ml_prediction_service import MLPredictionService
-from stunting_app.services.zscore_service import ZScoreService
 from stunting_app.services.recommendation_service import RecommendationService
-from stunting_app.repositories.who_repository import WHORepository
 from stunting_app.repositories.child_repository import ChildRepository
 from stunting_app.repositories.measurement_repository import MeasurementRepository
 from stunting_app.repositories.education_repository import EducationRepository
@@ -32,40 +30,32 @@ router = APIRouter()
 
 # Instantiate Singletons
 ml_service = MLPredictionService(models_dir=settings.MODELS_DIR)
-who_repo = WHORepository()
 child_repo = ChildRepository()
 measurement_repo = MeasurementRepository()
 education_repo = EducationRepository()
 
-async def get_who_calculation(
-    db: AsyncSession, gender: str, age_in_months: int, height_cm: float, weight_kg: float
-) -> WHOCalculationResponse:
-    # Fetch L, M, S for Height-for-Age (lhfa)
-    lhfa_std = await who_repo.get_standard(db, gender, age_in_months, 'lhfa')
-    haz = ZScoreService.calculate_zscore(height_cm, lhfa_std.l, lhfa_std.m, lhfa_std.s) if lhfa_std else 0.0
-        
-    # Fetch L, M, S for Weight-for-Age (wfa)
-    wfa_std = await who_repo.get_standard(db, gender, age_in_months, 'wfa')
-    waz = ZScoreService.calculate_zscore(weight_kg, wfa_std.l, wfa_std.m, wfa_std.s) if wfa_std else 0.0
-
-    # Fetch L, M, S for Weight-for-Length/Height (wflh)
-    wflh_std = await who_repo.get_standard(db, gender, age_in_months, 'wflh')
-    whz = ZScoreService.calculate_zscore(weight_kg, wflh_std.l, wflh_std.m, wflh_std.s) if wflh_std else 0.0
-
-    return WHOCalculationResponse(
-        haz_zscore=round(haz, 2),
-        waz_zscore=round(waz, 2),
-        whz_zscore=round(whz, 2),
-        stunting_status_who=ZScoreService.classify_stunting(haz),
-        wasting_status_who=ZScoreService.classify_wasting(whz),
-        underweight_status_who=ZScoreService.classify_underweight(waz)
-    )
-
 @router.post("/api/calculate", response_model=CalculateResponse)
 async def calculate_zscore_on_the_fly(request: CalculateRequest, db: AsyncSession = Depends(get_db_session)):
-    who_res = await get_who_calculation(db, request.gender, request.age_in_months, request.height_cm, request.weight_kg)
-    recommendations = await RecommendationService.get_recommendations(db, stunting_status=who_res.stunting_status_who, age_months=request.age_in_months)
-    return CalculateResponse(input=request, who_calculation=who_res, recommendations=recommendations)
+    ml_res_dict = ml_service.predict(request.gender, request.age_in_months, request.height_cm, request.weight_kg)
+    ml_res = MLPredictionResponse(**ml_res_dict)
+    
+    # We can use ML stunting status to get recommendations
+    recommendations = await RecommendationService.get_recommendations(db, stunting_status=ml_res.stunting_status_ml, age_months=request.age_in_months)
+    meal_plan = RecommendationService.get_meal_plan(stunting_status=ml_res.stunting_status_ml, age_months=request.age_in_months)
+    
+    import datetime
+    if ml_res.stunting_status_ml in ["zona_bahaya", "zona_sedang"] or ml_res.wasting_status_ml in ["zona_bahaya", "zona_sedang"]:
+        next_visit = datetime.date.today() + datetime.timedelta(days=14)
+    else:
+        next_visit = datetime.date.today() + datetime.timedelta(days=30)
+
+    return CalculateResponse(
+        input=request, 
+        ml_prediction=ml_res, 
+        recommendations=recommendations,
+        meal_plan=meal_plan,
+        next_visit_date=next_visit
+    )
 
 @router.post("/api/predict", response_model=PredictResponse)
 async def predict_ml_on_the_fly(request: PredictRequest):
@@ -79,54 +69,79 @@ async def create_measurement(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_user)
 ):
-    child = await child_repo.get_by_id(db, request.child_id)
-    if not child:
-        raise HTTPException(status_code=404, detail="Child not found")
+    try:
+        child = await child_repo.get_by_id(db, request.child_id)
+        if not child:
+            raise HTTPException(status_code=404, detail="Child not found")
+            
+        # Authorization check
+        if current_user.role != RoleEnum.admin:
+            query = select(Guardian).where(Guardian.user_id == current_user.id)
+            guardian = (await db.execute(query)).scalars().first()
+            if not guardian or child.guardian_id != guardian.id:
+                raise HTTPException(status_code=403, detail="Not authorized to add measurement for this child")
+            
+        age_td = request.measured_at - child.date_of_birth
+        age_months = max(0, math.floor(age_td.days / 30.44))
         
-    # Authorization check
-    if current_user.role != RoleEnum.admin:
-        query = select(Guardian).where(Guardian.user_id == current_user.id)
-        guardian = (await db.execute(query)).scalar_one_or_none()
-        if not guardian or child.guardian_id != guardian.id:
-            raise HTTPException(status_code=403, detail="Not authorized to add measurement for this child")
+        ml_res_dict = ml_service.predict(child.gender, age_months, request.height, request.weight)
         
-    age_td = request.measured_at - child.date_of_birth
-    age_months = max(0, math.floor(age_td.days / 30.44))
-    
-    who_res = await get_who_calculation(db, child.gender, age_months, request.height, request.weight)
-    ml_res_dict = ml_service.predict(child.gender, age_months, request.height, request.weight)
-    
-    measurement_data = {
-        "child_id": request.child_id,
-        "measured_at": request.measured_at,
-        "age_in_months": age_months,
-        "weight": request.weight,
-        "height": request.height,
-        "head_circumference": request.head_circumference,
-        "measured_by": request.measured_by
-    }
-    result_data = {**who_res.model_dump(), **ml_res_dict}
-    
-    db_measurement = await measurement_repo.create_with_result(db, measurement_data, result_data)
-    recommendations = await RecommendationService.get_recommendations(db, stunting_status=who_res.stunting_status_who, age_months=age_months)
-    
-    return MeasurementResponse(
-        id=db_measurement.id,
-        child_id=db_measurement.child_id,
-        measured_at=db_measurement.measured_at,
-        age_in_months=db_measurement.age_in_months,
-        weight=db_measurement.weight,
-        height=db_measurement.height,
-        head_circumference=db_measurement.head_circumference,
-        measured_by=db_measurement.measured_by,
-        stunting_result=result_data,
-        food_recommendations=recommendations
-    )
+        measurement_data = {
+            "child_id": request.child_id,
+            "measured_at": request.measured_at,
+            "age_in_months": age_months,
+            "weight": request.weight,
+            "height": request.height,
+            "head_circumference": request.head_circumference,
+            "measured_by": request.measured_by
+        }
+        result_data = {
+            "stunting_status_ml": ml_res_dict.get("stunting_status_ml"),
+            "wasting_status_ml": ml_res_dict.get("wasting_status_ml"),
+            "ml_stunting_confidence": ml_res_dict.get("stunting_confidence", 0.0),
+            "ml_wasting_confidence": ml_res_dict.get("wasting_confidence", 0.0)
+        }
+        
+        db_measurement = await measurement_repo.create_with_result(db, measurement_data, result_data)
+        recommendations = await RecommendationService.get_recommendations(db, stunting_status=ml_res_dict["stunting_status_ml"], age_months=age_months)
+        meal_plan = RecommendationService.get_meal_plan(stunting_status=ml_res_dict["stunting_status_ml"], age_months=age_months)
+        
+        import datetime
+        if ml_res_dict["stunting_status_ml"] in ["zona_bahaya", "zona_sedang"] or ml_res_dict["wasting_status_ml"] in ["zona_bahaya", "zona_sedang"]:
+            next_visit = request.measured_at + datetime.timedelta(days=14)
+        else:
+            next_visit = request.measured_at + datetime.timedelta(days=30)
+        
+        return MeasurementResponse(
+            id=db_measurement.id,
+            child_id=db_measurement.child_id,
+            measured_at=db_measurement.measured_at,
+            age_in_months=db_measurement.age_in_months,
+            weight=db_measurement.weight,
+            height=db_measurement.height,
+            head_circumference=db_measurement.head_circumference,
+            measured_by=db_measurement.measured_by,
+            stunting_result={
+                "stunting_status_ml": ml_res_dict.get("stunting_status_ml"),
+                "wasting_status_ml": ml_res_dict.get("wasting_status_ml"),
+                "stunting_confidence": ml_res_dict.get("stunting_confidence", 0.0),
+                "wasting_confidence": ml_res_dict.get("wasting_confidence", 0.0)
+            },
+            food_recommendations=recommendations,
+            meal_plan=meal_plan,
+            next_visit_date=next_visit
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Gagal menyimpan pengukuran: {str(e)}")
 
 @router.get("/api/guardians/me", response_model=GuardianResponse)
 async def get_my_guardian_profile(db: AsyncSession = Depends(get_db_session), current_user: User = Depends(require_user)):
-    query = select(Guardian).where(Guardian.user_id == current_user.id)
-    guardian = (await db.execute(query)).scalar_one_or_none()
+    query = select(Guardian).options(selectinload(Guardian.children)).where(Guardian.user_id == current_user.id)
+    guardian = (await db.execute(query)).scalars().first()
     if not guardian:
         raise HTTPException(status_code=404, detail="Guardian profile not found")
     return guardian
@@ -149,14 +164,18 @@ async def create_child(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_user)
 ):
-    query = select(Guardian).where(Guardian.user_id == current_user.id)
-    guardian = (await db.execute(query)).scalar_one_or_none()
-    
-    if not guardian:
-        raise HTTPException(status_code=403, detail="Only users with a guardian profile can add a child.")
+    target_guardian_id = None
+    if current_user.role == "admin" and request.guardian_id:
+        target_guardian_id = request.guardian_id
+    else:
+        query = select(Guardian).where(Guardian.user_id == current_user.id)
+        guardian = (await db.execute(query)).scalars().first()
+        if not guardian:
+            raise HTTPException(status_code=403, detail="Hanya akun dengan profil orang tua yang dapat menambahkan anak. Jika admin, harap tentukan Orang Tua (guardian_id).")
+        target_guardian_id = guardian.id
         
     child_data = {
-        "guardian_id": guardian.id,
+        "guardian_id": target_guardian_id,
         "name": request.name,
         "gender": request.gender,
         "date_of_birth": request.date_of_birth,
@@ -180,7 +199,20 @@ async def get_child_history(id: str, db: AsyncSession = Depends(get_db_session),
     result = await db.execute(query)
     measurements = result.scalars().all()
     
-    return [{"measurement": m, "result": m.stunting_result} for m in measurements]
+    response = []
+    for m in measurements:
+        if m.stunting_result:
+            status = m.stunting_result.stunting_status_ml or m.stunting_result.stunting_status_who
+        else:
+            status = "normal"
+        meal_plan = RecommendationService.get_meal_plan(status, m.age_in_months)
+        response.append({
+            "measurement": m,
+            "result": m.stunting_result,
+            "meal_plan": meal_plan
+        })
+        
+    return response
 
 @router.get("/api/admin/children", response_model=List[ChildResponse])
 async def search_children(

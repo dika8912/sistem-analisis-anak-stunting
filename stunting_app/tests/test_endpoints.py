@@ -29,7 +29,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from stunting_app.main import app
-from stunting_app.services.zscore_service import ZScoreService
+
 from stunting_app.services.ml_prediction_service import MLPredictionService
 from stunting_app.config.settings import settings
 from stunting_app.core.security import get_password_hash, create_access_token, verify_password
@@ -53,140 +53,7 @@ user_token  = make_token(USER_ID, "user")
 admin_token = make_token(ADMIN_ID, "admin")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 1. UNIT TEST: ZScoreService
-# ─────────────────────────────────────────────────────────────────────────────
 
-class TestZScoreService:
-    """Test klasifikasi dan perhitungan WHO LMS Z-Score."""
-
-    # ── Stunting Classification ──────────────────────────────────────────────
-
-    def test_classify_stunting_severely(self):
-        """HAZ < -3 harus 'severely_stunted'"""
-        assert ZScoreService.classify_stunting(-3.01) == "severely_stunted"
-
-    def test_classify_stunting_stunted(self):
-        """HAZ antara -3 dan -2 → 'stunted'"""
-        assert ZScoreService.classify_stunting(-2.5) == "stunted"
-
-    def test_classify_stunting_normal(self):
-        """HAZ antara -2 dan 3 → 'normal'"""
-        assert ZScoreService.classify_stunting(0.0) == "normal"
-
-    def test_classify_stunting_tall(self):
-        """HAZ > 3 → 'tall'"""
-        assert ZScoreService.classify_stunting(3.01) == "tall"
-
-    def test_classify_stunting_exact_boundary_minus3(self):
-        """HAZ tepat -3.0 → masuk 'stunted', bukan 'severely_stunted' (boundary exclusive)"""
-        assert ZScoreService.classify_stunting(-3.0) == "stunted"
-
-    def test_classify_stunting_exact_boundary_minus2(self):
-        """HAZ tepat -2.0 → 'normal'"""
-        assert ZScoreService.classify_stunting(-2.0) == "normal"
-
-    def test_classify_stunting_extreme_positive(self):
-        """HAZ yang sangat tinggi (misalkan Giant Syndrome) → tetap 'tall'"""
-        assert ZScoreService.classify_stunting(99.9) == "tall"
-
-    def test_classify_stunting_extreme_negative(self):
-        """HAZ yang sangat negatif → tetap 'severely_stunted'"""
-        assert ZScoreService.classify_stunting(-99.9) == "severely_stunted"
-
-    # ── Wasting Classification ───────────────────────────────────────────────
-
-    def test_classify_wasting_severely_wasted(self):
-        """WHZ < -3 → 'severely_wasted'"""
-        assert ZScoreService.classify_wasting(-3.1) == "severely_wasted"
-
-    def test_classify_wasting_wasted(self):
-        """WHZ -3 sampai -2 → 'wasted'"""
-        assert ZScoreService.classify_wasting(-2.5) == "wasted"
-
-    def test_classify_wasting_normal(self):
-        """WHZ antara -2 sampai 1 → 'normal'"""
-        assert ZScoreService.classify_wasting(0.5) == "normal"
-
-    def test_classify_wasting_risk_overweight(self):
-        """WHZ antara 1 dan 2 → 'risk_of_overweight'"""
-        assert ZScoreService.classify_wasting(1.5) == "risk_of_overweight"
-
-    def test_classify_wasting_overweight(self):
-        """WHZ antara 2 dan 3 → 'overweight'"""
-        assert ZScoreService.classify_wasting(2.5) == "overweight"
-
-    def test_classify_wasting_obese(self):
-        """WHZ > 3 → 'obese'"""
-        assert ZScoreService.classify_wasting(3.5) == "obese"
-
-    # ── Underweight Classification ───────────────────────────────────────────
-
-    def test_classify_underweight_severely(self):
-        assert ZScoreService.classify_underweight(-3.1) == "severely_underweight"
-
-    def test_classify_underweight_underweight(self):
-        assert ZScoreService.classify_underweight(-2.5) == "underweight"
-
-    def test_classify_underweight_normal(self):
-        assert ZScoreService.classify_underweight(0.0) == "normal"
-
-    # ── Z-Score Calculation ──────────────────────────────────────────────────
-
-    def test_zscore_formula_L_nonzero(self):
-        """Test formula LMS saat L != 0"""
-        # Z = (((y/M)**L) - 1) / (L*S)
-        y, L, M, S = 80.0, 1.0, 80.0, 0.1
-        expected = (((80.0 / 80.0) ** 1.0) - 1) / (1.0 * 0.1)
-        assert ZScoreService.calculate_zscore(y, L, M, S) == pytest.approx(expected)
-
-    def test_zscore_formula_L_zero(self):
-        """Test formula LMS saat L == 0 → gunakan ln()"""
-        import math
-        y, M, S = 80.0, 80.0, 0.1
-        expected = math.log(y / M) / S
-        assert ZScoreService.calculate_zscore(y, 0.0, M, S) == pytest.approx(expected)
-
-    def test_zscore_normal_child_L_zero(self):
-        """Anak normal dengan L=0 harus menghasilkan Z-Score = 0"""
-        result = ZScoreService.calculate_zscore(70.0, 0.0, 70.0, 0.05)
-        assert result == pytest.approx(0.0)
-
-    def test_zscore_stunted_child_negative(self):
-        """Anak stunting harus menghasilkan Z-Score negatif"""
-        # Tinggi aktual (50 cm) jauh lebih rendah dari median (80 cm)
-        result = ZScoreService.calculate_zscore(50.0, 1.0, 80.0, 0.1)
-        assert result < 0
-
-    def test_zscore_tall_child_positive(self):
-        """Anak tinggi harus menghasilkan Z-Score positif"""
-        result = ZScoreService.calculate_zscore(120.0, 1.0, 80.0, 0.1)
-        assert result > 0
-
-    def test_zscore_measurement_equals_median(self):
-        """Bila nilai = median (M), Z-Score harus = 0"""
-        result = ZScoreService.calculate_zscore(75.0, 1.0, 75.0, 0.1)
-        assert result == pytest.approx(0.0)
-
-    def test_zscore_tiny_value_extremely_small(self):
-        """Nilai pengukuran sangat kecil dengan L!=0 tidak crash, hanya menghasilkan nilai negatif ekstrem"""
-        result = ZScoreService.calculate_zscore(0.001, 1.0, 80.0, 0.1)
-        assert result < -1  # sangat negatif (stunted)
-
-    # ── Skenario Aneh ────────────────────────────────────────────────────────
-
-    def test_zscore_negative_measurement_crash(self):
-        """Pengukuran negatif (data rusak) dengan L=0 → crash math.log"""
-        with pytest.raises((ValueError, Exception)):
-            ZScoreService.calculate_zscore(-5.0, 0.0, 80.0, 0.1)
-
-    def test_classify_stunting_float_nan(self):
-        """Nilai NaN tidak boleh menghasilkan klasifikasi yang benar (skenario edge)"""
-        import math
-        result = ZScoreService.classify_stunting(float('nan'))
-        # nan < -3.0 is False, nan < -2.0 is False, nan > 3.0 is False → 'normal'
-        # Ini perilaku Python yang "aneh" tapi harus dipahami
-        assert result == "normal"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -332,7 +199,7 @@ class TestAuthEndpoints:
             })
         app.dependency_overrides.clear()
         assert resp.status_code == 400
-        assert "already registered" in resp.json()["detail"]
+        assert "sudah terdaftar" in resp.json()["detail"].lower() or "already registered" in resp.json()["detail"].lower()
 
     @pytest.mark.anyio
     async def test_register_password_too_short(self):
@@ -565,13 +432,10 @@ class TestDetectEndpoint:
 
     @pytest.mark.anyio
     async def test_detect_normal_child(self):
-        """Anak normal → endpoint harus return 200 dengan who_calculation"""
-        with patch("stunting_app.api.endpoints.who_repo.get_standard") as mock_who, \
-             patch("stunting_app.api.endpoints.ml_service.predict") as mock_ml, \
+        """Anak normal → endpoint harus return 200 dengan ml_prediction"""
+        with patch("stunting_app.api.endpoints.ml_service.predict") as mock_ml, \
              patch("stunting_app.api.endpoints.RecommendationService.get_recommendations", new_callable=AsyncMock) as mock_rec:
-
-            std = MagicMock(); std.l = 1.0; std.m = 85.5; std.s = 0.1
-            mock_who.return_value = std
+            
             mock_ml.return_value = {
                 "stunting_status_ml": "normal", "stunting_confidence": 0.95,
                 "wasting_status_ml": "normal", "wasting_confidence": 0.90
@@ -585,18 +449,15 @@ class TestDetectEndpoint:
                 })
         assert resp.status_code == 200
         data = resp.json()
-        assert "who_calculation" in data
-
+        assert "ml_prediction" in data
         assert "recommendations" in data
 
     @pytest.mark.anyio
     async def test_detect_female_newborn(self):
         """Bayi perempuan baru lahir (0 bulan, berat 3 kg, tinggi 50 cm)"""
-        with patch("stunting_app.api.endpoints.who_repo.get_standard") as mock_who, \
-             patch("stunting_app.api.endpoints.ml_service.predict") as mock_ml, \
+        with patch("stunting_app.api.endpoints.ml_service.predict") as mock_ml, \
              patch("stunting_app.api.endpoints.RecommendationService.get_recommendations", new_callable=AsyncMock) as mock_rec:
-            std = MagicMock(); std.l = 1.0; std.m = 49.0; std.s = 0.04
-            mock_who.return_value = std
+            
             mock_ml.return_value = {"stunting_status_ml": "normal", "stunting_confidence": 0.8, "wasting_status_ml": "normal", "wasting_confidence": 0.8}
             mock_rec.return_value = []
 
@@ -653,11 +514,9 @@ class TestDetectEndpoint:
     @pytest.mark.anyio
     async def test_detect_extremely_obese_child(self):
         """Anak dengan berat sangat berlebih (50 kg, usia 12 bulan)"""
-        with patch("stunting_app.api.endpoints.who_repo.get_standard") as mock_who, \
-             patch("stunting_app.api.endpoints.ml_service.predict") as mock_ml, \
+        with patch("stunting_app.api.endpoints.ml_service.predict") as mock_ml, \
              patch("stunting_app.api.endpoints.RecommendationService.get_recommendations", new_callable=AsyncMock) as mock_rec:
-            std = MagicMock(); std.l = 1.0; std.m = 9.6; std.s = 0.15
-            mock_who.return_value = std
+            
             mock_ml.return_value = {"stunting_status_ml": "normal", "stunting_confidence": 0.5, "wasting_status_ml": "obese", "wasting_confidence": 0.99}
             mock_rec.return_value = ["Kurangi asupan gula"]
 
@@ -837,34 +696,6 @@ class TestRBACProtection:
 class TestWeirdScenarios:
     """Skenario paling aneh dan ekstrem."""
 
-    def test_zscore_baby_bigger_than_median_by_100x(self):
-        """Anak raksasa: tinggi 7.000 cm (tidak realistis) → tetap return float"""
-        result = ZScoreService.calculate_zscore(7000.0, 1.0, 70.0, 0.1)
-        assert isinstance(result, float)
-        assert result > 10  # sangat tall
-
-    def test_classify_stunting_infinity(self):
-        """Z-Score = infinity → Python: float('inf') > 3.0 adalah True → 'tall'"""
-        result = ZScoreService.classify_stunting(float('inf'))
-        assert result == "tall"
-
-    def test_classify_stunting_negative_infinity(self):
-        """Z-Score = -infinity → 'severely_stunted'"""
-        result = ZScoreService.classify_stunting(float('-inf'))
-        assert result == "severely_stunted"
-
-    def test_classify_wasting_exactly_zero(self):
-        """WHZ = 0 tepat (normal perfect) → 'normal'"""
-        assert ZScoreService.classify_wasting(0.0) == "normal"
-
-    def test_classify_wasting_boundary_2(self):
-        """WHZ tepat di 2.0 → 'risk_of_overweight' (exclusive boundary dengan overweight)"""
-        assert ZScoreService.classify_wasting(2.0) == "risk_of_overweight"
-
-    def test_classify_wasting_boundary_1(self):
-        """WHZ tepat di 1.0 → 'normal' (boundary antara normal dan risk)"""
-        assert ZScoreService.classify_wasting(1.0) == "normal"
-
     def test_ml_prediction_without_model(self):
         """Prediksi tanpa model yang di-load → return status 'model_not_trained'"""
         # Gunakan path yang tidak ada agar model gagal diload
@@ -900,12 +731,10 @@ class TestWeirdScenarios:
     @pytest.mark.anyio
     async def test_detect_float_age(self):
         """Umur dengan float (e.g., 12.5) → FastAPI harus truncate ke int atau reject"""
-        with patch("stunting_app.api.endpoints.who_repo.get_standard") as mock_who, \
-             patch("stunting_app.api.endpoints.ml_service.predict") as mock_ml, \
+        with patch("stunting_app.api.endpoints.ml_service.predict") as mock_ml, \
              patch("stunting_app.api.endpoints.RecommendationService.get_recommendations", new_callable=AsyncMock) as mock_rec:
-            std = MagicMock(); std.l = 1.0; std.m = 75.0; std.s = 0.1
-            mock_who.return_value = std
-            mock_ml.return_value = {"stunting_status": "normal", "stunting_confidence": 0.9, "wasting_status": "normal", "wasting_confidence": 0.9}
+            
+            mock_ml.return_value = {"stunting_status_ml": "normal", "stunting_confidence": 0.9, "wasting_status_ml": "normal", "wasting_confidence": 0.9}
             mock_rec.return_value = []
 
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
@@ -944,7 +773,7 @@ class TestWeirdScenarios:
         from stunting_app.api.deps import get_current_active_user
         app.dependency_overrides[get_current_active_user] = lambda: mock_user
 
-        with patch("stunting_app.api.endpoints.child_repo.get_by_id", new_callable=AsyncMock, return_value=None):
+        with patch("stunting_app.api.endpoints.child_repo.get_by_id_with_guardian", new_callable=AsyncMock, return_value=None):
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
                 resp = await ac.get(f"/api/children/uuid-tidak-ada/history",
                                     headers={"Authorization": f"Bearer {admin_token}"})
@@ -986,10 +815,7 @@ class TestWeirdScenarios:
         # API harus tidak crash. Backend adalah JSON API, XSS tidak relevan di server level.
         assert resp.status_code in [200, 400, 422]
 
-    def test_zscore_service_s_equal_zero_division(self):
-        """S = 0 dalam formula → ZeroDivisionError (edge case data WHO rusak)"""
-        with pytest.raises(ZeroDivisionError):
-            ZScoreService.calculate_zscore(75.0, 1.0, 75.0, 0.0)  # S = 0
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

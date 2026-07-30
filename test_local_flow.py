@@ -37,8 +37,8 @@ calc_payload = {"gender": "F", "age_in_months": 24, "height_cm": 80.5, "weight_k
 print("Mengirim payload:", calc_payload)
 calc_res = fetch("/calculate", calc_payload)
 if calc_res:
-    print("✅ WHO Status:", calc_res['who_calculation']['stunting_status_who'])
-    print("✅ Z-Score HAZ:", calc_res['who_calculation']['haz_zscore'])
+    print("✅ ML Status:", calc_res['ml_prediction']['stunting_status_ml'])
+    print("✅ ML Confidence:", calc_res['ml_prediction']['stunting_confidence'])
 
 # 3. Test /api/predict
 print_step("3. Test ML Predict (POST /api/predict)")

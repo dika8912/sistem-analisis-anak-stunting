@@ -32,6 +32,7 @@ class TestChildFeatures:
             mock_child.gender = "M"
             mock_child.date_of_birth = "2020-01-01"
             mock_child.guardian_id = "guardian-id"
+            mock_child.guardian = None
             
             scalars_mock.all.return_value = [mock_child]
             result_mock = MagicMock()
@@ -94,7 +95,13 @@ class TestChildFeatures:
         
         # Simulate eager loaded guardian
         mock_guardian = MagicMock()
+        mock_guardian.id = "guardian-id"
         mock_guardian.user_id = "user-id"  # belongs to this user
+        mock_guardian.name = "Test Guardian"
+        mock_guardian.nomor_kk = "3201010101010001"
+        mock_guardian.phone = "08123456789"
+        mock_guardian.email = "test@example.com"
+        mock_guardian.address = "Jl. Test No. 1"
         mock_child.guardian = mock_guardian
         
         from stunting_app.api.deps import get_current_active_user
@@ -133,6 +140,7 @@ class TestChildFeatures:
         mock_child.date_of_birth = "2020-01-01"
         mock_child.guardian_id = "guardian-id"
         mock_child.nik = None
+        mock_child.guardian = None
 
         async def fake_get_db():
             db = AsyncMock()

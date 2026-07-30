@@ -19,14 +19,14 @@ class BaseRepository(Generic[ModelType]):
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    async def create(self, db: AsyncSession, *, obj_in: dict) -> ModelType:
+    async def create(self, db: AsyncSession, obj_in: dict) -> ModelType:
         db_obj = self.model(**obj_in)
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
         return db_obj
 
-    async def update(self, db: AsyncSession, *, id: str, obj_in: dict) -> Optional[ModelType]:
+    async def update(self, db: AsyncSession, id: str, obj_in: dict) -> Optional[ModelType]:
         db_obj = await self.get_by_id(db, id)
         if not db_obj:
             return None
@@ -36,7 +36,7 @@ class BaseRepository(Generic[ModelType]):
         await db.refresh(db_obj)
         return db_obj
 
-    async def delete(self, db: AsyncSession, *, id: str) -> bool:
+    async def delete(self, db: AsyncSession, id: str) -> bool:
         query = delete(self.model).where(self.model.id == id)
         result = await db.execute(query)
         await db.commit()

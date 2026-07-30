@@ -24,3 +24,39 @@ class RecommendationService:
             return ["Lanjutkan pemantauan tumbuh kembang bulanan di Posyandu."]
             
         return list(recommendations)
+
+    @staticmethod
+    def get_meal_plan(stunting_status: str, age_months: int) -> dict:
+        if age_months < 6:
+            return {
+                "pagi": "ASI Eksklusif (susui sesering mungkin)",
+                "siang": "ASI Eksklusif",
+                "malam": "ASI Eksklusif"
+            }
+        
+        if 6 <= age_months < 12:
+            if stunting_status in ["zona_bahaya", "zona_sedang"]:
+                return {
+                    "pagi": "Bubur saring dengan telur puyuh rebus dan kaldu ayam",
+                    "siang": "Nasi tim lumat dengan hati ayam dan wortel cincang",
+                    "malam": "Bubur lumat dengan ikan lele kukus dan tahu"
+                }
+            else:
+                return {
+                    "pagi": "Bubur susu atau pure pisang",
+                    "siang": "Nasi tim saring dengan tahu dan sayur bayam",
+                    "malam": "Bubur lumat dengan fillet ikan"
+                }
+        else:
+            if stunting_status in ["zona_bahaya", "zona_sedang"]:
+                return {
+                    "pagi": "Nasi dengan 2 butir telur dadar/rebus dan tempe",
+                    "siang": "Nasi padat dengan lele goreng garing dan sayur sop kaldu tulang",
+                    "malam": "Nasi hangat dengan semur hati ayam dan tahu"
+                }
+            else:
+                return {
+                    "pagi": "Nasi dengan telur rebus dan sayur bening",
+                    "siang": "Nasi dengan ikan laut/tawar goreng dan tumis kangkung",
+                    "malam": "Nasi dengan perkedel tempe dan tumis buncis"
+                }

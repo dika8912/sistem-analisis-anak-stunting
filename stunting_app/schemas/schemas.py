@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import List, Optional
 from datetime import date
 from enum import Enum
@@ -20,12 +20,20 @@ class Token(BaseModel):
 
 class RegisterRequest(BaseModel):
     username: str = Field(..., min_length=3)
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     password: str = Field(..., min_length=6)
     name: str = Field(..., description="Nama Guardian")
     nomor_kk: str = Field(..., description="Nomor Kartu Keluarga")
     phone: str
     address: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        if v and v.strip():
+            if "@" not in v or "." not in v:
+                raise ValueError("Format email tidak valid")
+        return v
 
 class UserResponse(BaseModel):
     id: str
@@ -33,13 +41,13 @@ class UserResponse(BaseModel):
     email: Optional[str]
     role: RoleEnum
 
-class GuardianResponse(BaseModel):
+class GuardianSimpleResponse(BaseModel):
     id: str
     user_id: str
     name: str
     nomor_kk: str
     phone: str
-    email: Optional[str]
+    email: Optional[str] = None
     address: str
 
 class ChildResponse(BaseModel):
@@ -49,12 +57,24 @@ class ChildResponse(BaseModel):
     gender: str
     date_of_birth: date
     nik: Optional[str] = None
+    guardian: Optional[GuardianSimpleResponse] = None
+
+class GuardianResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    nomor_kk: str
+    phone: str
+    email: Optional[str]
+    address: str
+    children: Optional[List[ChildResponse]] = None
 
 class ChildCreateRequest(BaseModel):
     name: str = Field(..., min_length=2)
     gender: str = Field(..., description="'M' for Male, 'F' for Female", pattern="^[MF]$")
     date_of_birth: date
     nik: Optional[str] = Field(None, min_length=16, max_length=16, description="16 digit NIK")
+    guardian_id: Optional[str] = None
 
 class ChildUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, min_length=2)
@@ -91,24 +111,23 @@ class PredictRequest(BaseModel):
     height_cm: float = Field(..., gt=0)
     weight_kg: float = Field(..., gt=0)
 
-class WHOCalculationResponse(BaseModel):
-    haz_zscore: float
-    waz_zscore: float
-    whz_zscore: float
-    stunting_status_who: str
-    wasting_status_who: str
-    underweight_status_who: str
-
 class MLPredictionResponse(BaseModel):
     stunting_status_ml: str
     stunting_confidence: float
     wasting_status_ml: str
     wasting_confidence: float
 
+class MealPlan(BaseModel):
+    pagi: str
+    siang: str
+    malam: str
+
 class CalculateResponse(BaseModel):
     input: CalculateRequest
-    who_calculation: WHOCalculationResponse
+    ml_prediction: MLPredictionResponse
     recommendations: List[str]
+    meal_plan: Optional[MealPlan] = None
+    next_visit_date: Optional[date] = None
 
 class PredictResponse(BaseModel):
     input: PredictRequest
@@ -133,6 +152,8 @@ class MeasurementResponse(BaseModel):
     measured_by: Optional[str]
     stunting_result: dict
     food_recommendations: List[str]
+    meal_plan: Optional[MealPlan] = None
+    next_visit_date: Optional[date] = None
 
 class AdminStatsResponse(BaseModel):
     total_children: int

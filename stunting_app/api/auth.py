@@ -19,12 +19,20 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db_s
     query = select(User).where((User.username == request.username))
     result = await db.execute(query)
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=400, detail="Username sudah terdaftar. Silakan gunakan username lain.")
+        
+    # Check if email exists
+    email_val = request.email.strip() if request.email and request.email.strip() else None
+    if email_val:
+        query_email = select(User).where((User.email == email_val))
+        result_email = await db.execute(query_email)
+        if result_email.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Email sudah terdaftar. Silakan gunakan email lain atau langsung Login.")
         
     # Create user (force role to user)
     new_user = User(
         username=request.username,
-        email=request.email,
+        email=email_val,
         hashed_password=get_password_hash(request.password),
         role=RoleEnum.user
     )
@@ -37,7 +45,7 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db_s
         name=request.name,
         nomor_kk=request.nomor_kk,
         phone=request.phone,
-        email=request.email,
+        email=email_val,
         address=request.address
     )
     db.add(new_guardian)

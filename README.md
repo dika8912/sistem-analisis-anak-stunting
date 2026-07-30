@@ -894,3 +894,10 @@ Total: **79 test** yang mencakup:
 > ⚠️ Ganti nilai `JWT_SECRET` di file `.env` dengan string yang panjang dan acak sebelum deploy ke production. Jangan gunakan nilai default.
 >
 > ⚠️ Ganti password admin default (`admin123`) setelah seeder pertama kali dijalankan.
+
+---
+
+## 🚀 Panduan Deployment Produksi (Gratis: InfinityFree + Render + Cloud MySQL)
+
+Untuk panduan langkah-demi-langkah mendetail mengenai cara mendeploy **Frontend Laravel ke InfinityFree**, **Backend FastAPI + ML ke Render.com**, dan **Database MySQL ke Cloud (Aiven/TiDB)** secara **100% Gratis**, silakan baca dokumentasi resmi di:
+👉 **[DEPLOYMENT_INFINITYFREE.md](file:///d:/deteksianakstanding/DEPLOYMENT_INFINITYFREE.md)** (atau di repositori Frontend pada `DEPLOYMENT_INFINITYFREE.md`).

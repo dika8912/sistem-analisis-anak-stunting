@@ -8,12 +8,6 @@ class StuntingResult(Base, TimestampMixin):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     measurement_id: Mapped[str] = mapped_column(String(36), ForeignKey("measurements.id", ondelete="CASCADE"), unique=True, nullable=False)
-    haz_zscore: Mapped[float] = mapped_column(Float, nullable=False)
-    waz_zscore: Mapped[float] = mapped_column(Float, nullable=False)
-    whz_zscore: Mapped[float] = mapped_column(Float, nullable=False)
-    stunting_status_who: Mapped[str] = mapped_column(String(30), nullable=False)
-    wasting_status_who: Mapped[str] = mapped_column(String(30), nullable=False)
-    underweight_status_who: Mapped[str] = mapped_column(String(30), nullable=False)
     stunting_status_ml: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     wasting_status_ml: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     ml_stunting_confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
