@@ -11,4 +11,4 @@ COPY . .
 ENV PORT=7860
 EXPOSE 7860
 
-CMD ["sh", "-c", "uvicorn stunting_app.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "alembic upgrade head && python -m stunting_app.seeds.food_recommendation_seed && uvicorn stunting_app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

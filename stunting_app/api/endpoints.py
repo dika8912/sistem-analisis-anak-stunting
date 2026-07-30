@@ -36,32 +36,38 @@ education_repo = EducationRepository()
 
 @router.post("/api/calculate", response_model=CalculateResponse)
 async def calculate_zscore_on_the_fly(request: CalculateRequest, db: AsyncSession = Depends(get_db_session)):
-    ml_res_dict = ml_service.predict(request.gender, request.age_in_months, request.height_cm, request.weight_kg)
-    ml_res = MLPredictionResponse(**ml_res_dict)
-    
-    # We can use ML stunting status to get recommendations
-    recommendations = await RecommendationService.get_recommendations(db, stunting_status=ml_res.stunting_status_ml, age_months=request.age_in_months)
-    meal_plan = RecommendationService.get_meal_plan(stunting_status=ml_res.stunting_status_ml, age_months=request.age_in_months)
-    
-    import datetime
-    if ml_res.stunting_status_ml in ["zona_bahaya", "zona_sedang"] or ml_res.wasting_status_ml in ["zona_bahaya", "zona_sedang"]:
-        next_visit = datetime.date.today() + datetime.timedelta(days=14)
-    else:
-        next_visit = datetime.date.today() + datetime.timedelta(days=30)
+    try:
+        ml_res_dict = ml_service.predict(request.gender, request.age_in_months, request.height_cm, request.weight_kg)
+        ml_res = MLPredictionResponse(**ml_res_dict)
+        
+        # We can use ML stunting status to get recommendations
+        recommendations = await RecommendationService.get_recommendations(db, stunting_status=ml_res.stunting_status_ml, age_months=request.age_in_months)
+        meal_plan = RecommendationService.get_meal_plan(stunting_status=ml_res.stunting_status_ml, age_months=request.age_in_months)
+        
+        import datetime
+        if ml_res.stunting_status_ml in ["zona_bahaya", "zona_sedang"] or ml_res.wasting_status_ml in ["zona_bahaya", "zona_sedang"]:
+            next_visit = datetime.date.today() + datetime.timedelta(days=14)
+        else:
+            next_visit = datetime.date.today() + datetime.timedelta(days=30)
 
-    return CalculateResponse(
-        input=request, 
-        ml_prediction=ml_res, 
-        recommendations=recommendations,
-        meal_plan=meal_plan,
-        next_visit_date=next_visit
-    )
+        return CalculateResponse(
+            input=request, 
+            ml_prediction=ml_res, 
+            recommendations=recommendations,
+            meal_plan=meal_plan,
+            next_visit_date=next_visit
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Calculation error: {str(e)}")
 
 @router.post("/api/predict", response_model=PredictResponse)
 async def predict_ml_on_the_fly(request: PredictRequest):
-    ml_res_dict = ml_service.predict(request.gender, request.age_in_months, request.height_cm, request.weight_kg)
-    ml_res = MLPredictionResponse(**ml_res_dict)
-    return PredictResponse(input=request, ml_prediction=ml_res)
+    try:
+        ml_res_dict = ml_service.predict(request.gender, request.age_in_months, request.height_cm, request.weight_kg)
+        ml_res = MLPredictionResponse(**ml_res_dict)
+        return PredictResponse(input=request, ml_prediction=ml_res)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
 @router.post("/api/measurements", response_model=MeasurementResponse)
 async def create_measurement(
