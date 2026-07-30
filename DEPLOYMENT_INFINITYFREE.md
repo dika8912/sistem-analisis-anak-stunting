@@ -43,6 +43,21 @@ graph TD
    * **Password:** *(Kata sandi database)*
    * **Database Name:** `si_anting_db`
 
+### Cara Mengelola & Melihat Isi Tabel Aiven (Pengganti phpMyAdmin)
+* **Aiven tidak menyediakan phpMyAdmin** (karena merupakan layanan Cloud DBaaS murni).
+* **⚡ Anda TIDAK PERLU membuat tabel secara manual!**
+  Begitu Backend FastAPI (`stunting_app`) dijalankan di Render.com dan terhubung ke MySQL Aiven, sistem ORM (`SQLAlchemy` & `Alembic`) akan **otomatis membuat seluruh tabel** (`users`, `guardians`, `children`, `measurements`, `stunting_results`, dll) beserta relasinya.
+* **Cara Melihat Isi Tabel Menggunakan Aplikasi HeidiSQL (Gratis & Ringan):**
+  1. Download aplikasi [HeidiSQL](https://www.heidisql.com/download.php) untuk Windows (~5 MB).
+  2. Buka HeidiSQL, klik **New**, lalu masukkan:
+     - **Hostname/IP:** *Host Aiven Anda* (contoh: `sianting-xxx.d.aivencloud.com`)
+     - **User:** `avnadmin`
+     - **Password:** *Password Aiven Anda*
+     - **Port:** *Port Aiven Anda* (contoh: `10148`)
+     - **Databases:** `si_anting_db` (atau `defaultdb`)
+  3. **Wajib Aktifkan SSL:** Pindah ke tab **"SSL"** di HeidiSQL, lalu pada **SSL mode** pilih **"Require SSL"** (karena Aiven mewajibkan koneksi SSL aman).
+  4. Klik **Open** untuk melihat seluruh tabel, query SQL, dan mengelola isi data layaknya phpMyAdmin!
+
 ---
 
 ## ⚙️ 3. Langkah 2: Deploy Backend FastAPI & Machine Learning ke Render.com
