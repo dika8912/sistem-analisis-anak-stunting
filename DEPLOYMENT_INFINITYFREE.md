@@ -89,10 +89,16 @@ graph TD
    `https://si-anting-api.onrender.com`
 7. Buka browser dan coba kunjungi `https://si-anting-api.onrender.com/docs` untuk memastikan Swagger UI API sudah online.
 
-### 💡 Alternatif Hosting Backend 100% Gratis Tanpa Kartu Kredit (Hugging Face Spaces & Koyeb)
+### 💡 Alternatif Hosting Backend 100% Gratis Tanpa Kartu Kredit (Railway, Hugging Face Spaces & Koyeb)
 Jika akun Render.com Anda tetap meminta verifikasi kartu kredit, silakan gunakan alternatif berikut yang **100% GRATIS selamanya tanpa kartu kredit**:
 
-#### A. Opsi 1: Hugging Face Spaces (Sangat Direkomendasikan untuk AI/Python)
+#### A. Opsi 1 (Paling Direkomendasikan): Railway.app (Free Trial $5 Tanpa Kartu Kredit)
+1. Buka situs **[railway.app](https://railway.app/)** → Klik **Login with GitHub**.
+2. Klik **"+ New Project"** → Pilih **"Deploy from GitHub repo"** → Pilih repositori `sistem-analisis-anak-stunting` (branch `api`).
+3. Di tab **Variables**, tambahkan 6 variabel MySQL Aiven (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET`).
+4. Di tab **Settings > Networking**, klik **"Generate Domain"** untuk mendapatkan URL produksi resmi (contoh: `https://sistem-analisis-anak-stunting-production.up.railway.app`).
+
+#### B. Opsi 2: Hugging Face Spaces (Sangat Direkomendasikan untuk AI/Python)
 1. Daftar akun gratis di **[huggingface.co/join](https://huggingface.co/join)** (hanya menggunakan email).
 2. Setelah login, klik foto profil di pojok kanan atas → **New Space**.
 3. Isi **Space name:** `si-anting-api`, lalu pada pilihan **Space SDK**, pilih **Docker** (Blank).
