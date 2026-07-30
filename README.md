@@ -1,3 +1,11 @@
+---
+title: Si Anting API
+emoji: 👶
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+---
 # 🩺 Stunting Detection System API
 Sistem kalkulasi berat badan sesuai standar dari BMI (Indeks Berat Badan) menggunakan laravel dan python. 
 
