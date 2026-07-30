@@ -29,6 +29,9 @@
                 <h2 class="text-2xl font-bold text-gray-900">Daftar Anak</h2>
                 <p class="text-gray-500 mt-1">Pantau perkembangan dan histori diagnosa anak Anda.</p>
             </div>
+            <a href="/children/create" class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-md text-sm font-bold text-white hover:from-blue-700 hover:to-indigo-700 focus:outline-none transform transition-all hover:-translate-y-0.5">
+                <i class="ph ph-plus-circle text-lg mr-2"></i> Tambah Anak
+            </a>
         </div>
 
         <!-- Loading State -->
@@ -55,7 +58,10 @@
                 <i class="ph ph-baby text-5xl"></i>
             </div>
             <h3 class="text-xl font-bold text-gray-900 mb-2">Belum Ada Data Anak</h3>
-            <p class="text-gray-500 max-w-md">Data anak Anda belum ditambahkan. Untuk menambahkan data anak baru dan melakukan pengecekan stunting, silakan hubungi admin atau tenaga kesehatan terkait.</p>
+            <p class="text-gray-500 max-w-md mb-6">Data anak Anda belum ditambahkan. Klik tombol di bawah untuk menambahkan profil anak baru dan memulai pemantauan tumbuh kembang.</p>
+            <a href="/children/create" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-md text-sm font-bold text-white hover:from-blue-700 hover:to-indigo-700 transition-all">
+                <i class="ph ph-plus-circle text-lg mr-2"></i> Tambah Data Anak
+            </a>
         </div>
 
         <!-- Children Grid -->
@@ -134,6 +140,14 @@
                     const statusLabel = STATUS_LABEL_MAP[statusRaw] || (statusRaw ? statusRaw : 'Belum dicek');
                     const theme = STATUS_THEME[statusRaw] || { color: 'bg-gray-100 text-gray-700', icon: 'ph-info', border: 'bg-gray-300' };
 
+                    let ageMonths = child.age_in_months || child.age_months;
+                    if (ageMonths === undefined && (child.date_of_birth || child.birth_date)) {
+                        const birth = new Date(child.date_of_birth || child.birth_date);
+                        const now = new Date();
+                        ageMonths = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+                        if (ageMonths < 0) ageMonths = 0;
+                    }
+
                     const card = document.createElement('div');
                     card.className = 'bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative group overflow-hidden';
 
@@ -150,7 +164,7 @@
                         </div>
                         <h3 class="text-lg font-bold text-gray-900 mb-1 truncate" title="${child.name}">${child.name}</h3>
                         <p class="text-sm text-gray-500 mb-4">
-                            <i class="ph ph-calendar-blank mr-1"></i> ${child.age_months ? child.age_months + ' Bulan' : '-'}
+                            <i class="ph ph-calendar-blank mr-1"></i> ${ageMonths !== undefined ? ageMonths + ' Bulan' : '-'}
                         </p>
                         
                         <a href="/children/${child.id}" class="inline-flex items-center justify-center w-full px-4 py-2 bg-gray-50 text-blue-600 rounded-xl text-sm font-semibold hover:bg-blue-50 transition-colors group-hover:bg-blue-600 group-hover:text-white">

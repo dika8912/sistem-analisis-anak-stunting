@@ -9,14 +9,14 @@
         </div>
 
         <form id="createChildForm" class="p-8 space-y-6 bg-gray-50">
-            <!-- NIK Orang Tua / Guardian ID -->
-            <div>
-                <label for="guardian_id" class="block text-sm font-semibold text-gray-700 mb-1">ID Orang Tua (Guardian ID)</label>
+            <!-- NIK Orang Tua / Guardian ID (Hanya muncul jika Admin) -->
+            <div id="guardian_id_group" class="hidden">
+                <label for="guardian_id" class="block text-sm font-semibold text-gray-700 mb-1">ID Orang Tua (Guardian ID - Khusus Admin)</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="ph ph-identification-card text-gray-400 text-lg"></i>
                     </div>
-                    <input type="text" id="guardian_id" name="guardian_id" class="pl-10 block w-full border border-gray-300 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none" placeholder="Masukkan ID atau NIK Orang Tua" required>
+                    <input type="text" id="guardian_id" name="guardian_id" class="pl-10 block w-full border border-gray-300 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none" placeholder="Masukkan ID atau NIK Orang Tua (opsional untuk Orang Tua)">
                 </div>
             </div>
 
@@ -28,6 +28,17 @@
                         <i class="ph ph-user text-gray-400 text-lg"></i>
                     </div>
                     <input type="text" id="name" name="name" class="pl-10 block w-full border border-gray-300 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none" placeholder="Nama lengkap anak" required>
+                </div>
+            </div>
+
+            <!-- NIK Anak (Opsional) -->
+            <div>
+                <label for="nik" class="block text-sm font-semibold text-gray-700 mb-1">NIK Anak (16 Digit - Opsional)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="ph ph-cardholder text-gray-400 text-lg"></i>
+                    </div>
+                    <input type="text" id="nik" name="nik" class="pl-10 block w-full border border-gray-300 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none" placeholder="Masukkan 16 digit NIK Anak jika ada" maxlength="16">
                 </div>
             </div>
 
@@ -52,8 +63,8 @@
                         </div>
                         <select id="gender" name="gender" class="pl-10 block w-full border border-gray-300 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-700 appearance-none" required>
                             <option value="" disabled selected>Pilih jenis kelamin</option>
-                            <option value="L">Laki-laki (L)</option>
-                            <option value="P">Perempuan (P)</option>
+                            <option value="M">Laki-laki (M)</option>
+                            <option value="F">Perempuan (F)</option>
                         </select>
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                             <i class="ph ph-caret-down text-gray-400"></i>
@@ -63,7 +74,7 @@
             </div>
 
             <div class="pt-4 flex justify-end gap-3">
-                <a href="/admin/dashboard" class="px-6 py-3 bg-white border border-gray-300 rounded-xl shadow-sm text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-all">
+                <a href="javascript:history.back()" class="px-6 py-3 bg-white border border-gray-300 rounded-xl shadow-sm text-sm font-bold text-gray-700 hover:bg-gray-50 focus:outline-none transition-all">
                     Batal
                 </a>
                 <button type="submit" class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-md text-sm font-bold text-white hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg focus:outline-none transform transition-all hover:-translate-y-0.5">
@@ -76,17 +87,12 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Proteksi role admin
         const role = localStorage.getItem('user_role');
-        if (role !== 'admin') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Akses Ditolak',
-                text: 'Hanya admin yang dapat mengakses halaman ini.',
-            }).then(() => {
-                window.location.href = '/dashboard';
-            });
-            return;
+        const guardianGroup = document.getElementById('guardian_id_group');
+
+        // Jika login sebagai Admin, tampilkan field input ID Orang Tua
+        if (role === 'admin' && guardianGroup) {
+            guardianGroup.classList.remove('hidden');
         }
 
         document.getElementById('createChildForm').addEventListener('submit', async function (e) {
@@ -96,6 +102,7 @@
             const name = document.getElementById('name').value;
             const birth_date = document.getElementById('birth_date').value;
             const gender = document.getElementById('gender').value;
+            const nik = document.getElementById('nik').value;
 
             try {
                 Swal.fire({
@@ -107,14 +114,18 @@
                     }
                 });
 
+                const payload = {
+                    name: name,
+                    date_of_birth: birth_date,
+                    gender: gender
+                };
+                if (nik && nik.trim() !== '') {
+                    payload.nik = nik.trim();
+                }
+
                 await window.apiFetch('/api/children', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        guardian_id: parseInt(guardian_id), // Pastikan format ID int
-                        name: name,
-                        birth_date: birth_date,
-                        gender: gender
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 Swal.fire({
@@ -123,13 +134,21 @@
                     text: 'Data anak berhasil ditambahkan.',
                     confirmButtonColor: '#2563EB'
                 }).then(() => {
-                    window.location.href = '/admin/dashboard';
+                    window.location.href = role === 'admin' ? '/admin/dashboard' : '/dashboard';
                 });
 
             } catch (error) {
                 let message = 'Gagal menyimpan data anak.';
-                if (error.data && error.data.detail) {
-                    message = Array.isArray(error.data.detail) ? error.data.detail[0].msg : error.data.detail;
+                if (error.data) {
+                    if (typeof error.data.detail === 'string') {
+                        message = error.data.detail;
+                    } else if (Array.isArray(error.data.detail)) {
+                        message = error.data.detail.map(e => e.msg || 'Format input tidak valid').join('\n');
+                    } else if (error.data.message) {
+                        message = error.data.message;
+                    }
+                } else if (error.message) {
+                    message = error.message;
                 }
                 
                 Swal.fire({

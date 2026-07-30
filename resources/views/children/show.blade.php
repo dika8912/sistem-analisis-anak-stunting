@@ -67,6 +67,31 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Kartu Meal Planner AI -->
+            <div class="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden relative hidden" id="mealPlanCard">
+                <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                    <i class="ph ph-bowl-food text-8xl text-blue-500"></i>
+                </div>
+                <div class="p-6 relative z-10">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">AI Meal Planner (Rekomendasi)</h3>
+                    
+                    <div class="space-y-3 text-sm text-gray-800">
+                        <div class="flex items-start">
+                            <span class="font-bold w-16 text-blue-600">Pagi:</span> 
+                            <span id="mpPagi" class="flex-1">-</span>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="font-bold w-16 text-blue-600">Siang:</span> 
+                            <span id="mpSiang" class="flex-1">-</span>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="font-bold w-16 text-blue-600">Malam:</span> 
+                            <span id="mpMalam" class="flex-1">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Kolom Kanan: Chart & Histori -->
@@ -99,7 +124,7 @@
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Umur</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tinggi (cm)</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Berat (kg)</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status Stunting</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status (ML)</th>
                             </tr>
                         </thead>
                         <tbody id="historyTableBody" class="bg-white divide-y divide-gray-200">
@@ -114,6 +139,9 @@
         </div>
     </div>
 </div>
+
+<!-- Menyuntikkan Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
@@ -133,16 +161,22 @@
                 document.getElementById('childName').textContent = childData.name;
                 document.getElementById('childNameCard').textContent = childData.name;
                 document.getElementById('childInitial').textContent = childData.name.charAt(0).toUpperCase();
-                document.getElementById('childGender').textContent = childData.gender === 'L' ? 'Laki-laki' : 'Perempuan';
-                document.getElementById('childDob').textContent = new Date(childData.birth_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                document.getElementById('childGender').textContent = (childData.gender === 'M' || childData.gender === 'L') ? 'Laki-laki' : 'Perempuan';
                 
-                // Menghitung umur (bulan) secara kasar berdasarkan dob dan hari ini (opsional jika API tidak menyediakan)
-                const birth = new Date(childData.birth_date);
-                const now = new Date();
-                let months = (now.getFullYear() - birth.getFullYear()) * 12;
-                months -= birth.getMonth();
-                months += now.getMonth();
-                document.getElementById('childAge').textContent = months <= 0 ? 0 : months;
+                const dobVal = childData.date_of_birth || childData.birth_date;
+                if (dobVal) {
+                    document.getElementById('childDob').textContent = new Date(dobVal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                    
+                    const birth = new Date(dobVal);
+                    const now = new Date();
+                    let months = (now.getFullYear() - birth.getFullYear()) * 12;
+                    months -= birth.getMonth();
+                    months += now.getMonth();
+                    document.getElementById('childAge').textContent = months <= 0 ? 0 : months;
+                } else {
+                    document.getElementById('childDob').textContent = '-';
+                    document.getElementById('childAge').textContent = '-';
+                }
                 
                 if (childData.guardian) {
                     document.getElementById('guardianName').textContent = childData.guardian.name || '-';
@@ -163,6 +197,9 @@
 
         // Map label snake_case -> teks Indonesia
         const STATUS_LABEL_MAP = {
+            'zona_aman':            'Zona Aman (Normal)',
+            'zona_sedang':          'Zona Sedang',
+            'zona_bahaya':          'Zona Bahaya',
             'normal':               'Normal',
             'stunted':              'Pendek (Stunted)',
             'severely_stunted':     'Sangat Pendek',
@@ -179,6 +216,9 @@
 
         // Map label snake_case -> kelas Tailwind warna
         const STATUS_COLOR_MAP = {
+            'zona_aman':            'bg-emerald-100 text-emerald-800 border-emerald-200',
+            'zona_sedang':          'bg-orange-100 text-orange-800 border-orange-200',
+            'zona_bahaya':          'bg-red-100 text-red-800 border-red-200',
             'normal':               'bg-emerald-100 text-emerald-800 border-emerald-200',
             'stunted':              'bg-orange-100 text-orange-800 border-orange-200',
             'severely_stunted':     'bg-red-100 text-red-800 border-red-200',
@@ -200,6 +240,11 @@
             return STATUS_LABEL_MAP[status] || (status ? status : '-');
         };
 
+        const getStuntingStatus = (item) => item?.stunting_result?.stunting_status_ml || item?.stunting_result?.stunting_status_who || item?.stunting_status_ml || item?.stunting_status || 'normal';
+        const getWastingStatus = (item) => item?.stunting_result?.wasting_status_ml || item?.stunting_result?.wasting_status_who || item?.wasting_status_ml || item?.gizi_status || 'normal';
+        const getMeasuredDate = (item) => item?.measured_at || item?.measurement_date || '-';
+        const getAgeMonths = (item) => item?.age_in_months !== undefined ? item.age_in_months : (item?.age_months !== undefined ? item.age_months : 0);
+
         const renderLatestMeasurement = () => {
             const container = document.getElementById('latestMeasurementContainer');
             if (!historyData || historyData.length === 0) {
@@ -208,22 +253,27 @@
             }
 
             // Urutkan desc berdasarkan tanggal
-            const sortedHistory = [...historyData].sort((a, b) => new Date(b.measurement_date) - new Date(a.measurement_date));
+            const sortedHistory = [...historyData].sort((a, b) => new Date(getMeasuredDate(b)) - new Date(getMeasuredDate(a)));
             const latest = sortedHistory[0];
 
-            const statusClass = getStatusColor(latest.stunting_status);
+            const stuntingStatus = getStuntingStatus(latest);
+            const giziStatus = getWastingStatus(latest);
+            const stuntingClass = getStatusColor(stuntingStatus);
+            const giziClass = getStatusColor(giziStatus);
 
             container.innerHTML = `
-                <div class="flex justify-between items-end">
-                    <div>
-                        <p class="text-sm text-gray-500 mb-1">Status Z-Score (Tinggi/Umur)</p>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${statusClass}">
-                            ${getStatusLabel(latest.stunting_status)}
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-500 uppercase">AI Stunting (TB/U)</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${stuntingClass}">
+                            ${getStatusLabel(stuntingStatus)}
                         </span>
                     </div>
-                    <div class="text-right">
-                        <p class="text-xs text-gray-400 mb-1">Z-Score</p>
-                        <p class="text-xl font-black text-gray-800">${latest.z_score ? latest.z_score.toFixed(2) : '-'}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-500 uppercase">AI Gizi (BB/TB)</span>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${giziClass}">
+                            ${getStatusLabel(giziStatus)}
+                        </span>
                     </div>
                 </div>
 
@@ -240,10 +290,17 @@
                     </div>
                 </div>
                 <div class="mt-4 flex justify-between items-center">
-                    <span class="text-xs text-gray-500"><i class="ph ph-calendar text-gray-400 mr-1"></i> ${new Date(latest.measurement_date).toLocaleDateString('id-ID')}</span>
-                    <span class="text-xs text-gray-500">Umur: ${latest.age_months} bulan</span>
+                    <span class="text-xs text-gray-500"><i class="ph ph-calendar text-gray-400 mr-1"></i> ${new Date(getMeasuredDate(latest)).toLocaleDateString('id-ID')}</span>
+                    <span class="text-xs text-gray-500">Umur: ${getAgeMonths(latest)} bulan</span>
                 </div>
             `;
+
+            if (latest.meal_plan) {
+                document.getElementById('mealPlanCard').classList.remove('hidden');
+                document.getElementById('mpPagi').textContent = latest.meal_plan.pagi;
+                document.getElementById('mpSiang').textContent = latest.meal_plan.siang;
+                document.getElementById('mpMalam').textContent = latest.meal_plan.malam;
+            }
         };
 
         const renderHistoryTable = () => {
@@ -253,15 +310,15 @@
                 return;
             }
 
-            const sortedHistory = [...historyData].sort((a, b) => new Date(b.measurement_date) - new Date(a.measurement_date));
+            const sortedHistory = [...historyData].sort((a, b) => new Date(getMeasuredDate(b)) - new Date(getMeasuredDate(a)));
             
             tbody.innerHTML = sortedHistory.map(item => `
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        ${new Date(item.measurement_date).toLocaleDateString('id-ID')}
+                        ${new Date(getMeasuredDate(item)).toLocaleDateString('id-ID')}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        ${item.age_months} bln
+                        ${getAgeMonths(item)} bln
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         ${item.height}
@@ -269,9 +326,12 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         ${item.weight}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(item.stunting_status)}">
-                            ${getStatusLabel(item.stunting_status)}
+                    <td class="px-6 py-4 whitespace-nowrap space-x-1">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(getStuntingStatus(item))}" title="AI Stunting (TB/U)">
+                            TB: ${getStatusLabel(getStuntingStatus(item))}
+                        </span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(getWastingStatus(item))}" title="AI Gizi (BB/TB)">
+                            BB: ${getStatusLabel(getWastingStatus(item))}
                         </span>
                     </td>
                 </tr>
@@ -289,9 +349,9 @@
             if (!historyData || historyData.length === 0) return;
 
             // Sort asc for chart (timeline)
-            const sortedHistory = [...historyData].sort((a, b) => new Date(a.measurement_date) - new Date(b.measurement_date));
+            const sortedHistory = [...historyData].sort((a, b) => new Date(getMeasuredDate(a)) - new Date(getMeasuredDate(b)));
 
-            const labels = sortedHistory.map(h => `${h.age_months} bln`);
+            const labels = sortedHistory.map(h => `${getAgeMonths(h)} bln`);
             const dataPoints = sortedHistory.map(h => type === 'height' ? h.height : h.weight);
             
             const isHeight = type === 'height';

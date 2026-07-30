@@ -21,13 +21,17 @@ class DetectController extends Controller
     public function printPdf(Request $request)
     {
         $data = $request->validate([
+            'child_name' => 'nullable|string|max:100',
             'age_months' => 'required|numeric',
             'gender' => 'required|in:L,P',
             'height' => 'required|numeric',
             'weight' => 'required|numeric',
-            'z_score' => 'required|numeric',
+            'z_score' => 'nullable|numeric',
             'status' => 'required|string',
             'ml_prediction' => 'nullable|string',
+            'stunting_prediction' => 'nullable|string',
+            'gizi_prediction' => 'nullable|string',
+            'next_visit' => 'nullable|string',
         ]);
 
         $pdf = Pdf::loadView('detect.pdf', $data);

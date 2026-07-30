@@ -18,6 +18,10 @@ Route::get('/edukasi', function () {
     return view('halaman.edukasi'); 
 });
 
+Route::get('/about', function () {
+    return view('halaman.about'); 
+})->name('about');
+
 Route::get('/educations', [EducationsController::class, 'index'])->name('educations.index');
 Route::get('/educations/{id}', [EducationsController::class, 'show'])->name('educations.show');
 

@@ -120,13 +120,15 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             // Lakukan pemanggilan API asli
             const API_BASE = '{{ env("VITE_API_URL", "http://localhost:5601") }}';
-            const endpoint = `${API_BASE}/api/admin/children/search?${type}=${encodeURIComponent(keyword)}`;
+            const catParam = type === 'name' ? 'nama' : 'nik';
+            const queryUrl = `/api/admin/children/search?query_val=${encodeURIComponent(keyword)}&category=${catParam}`;
+            const endpoint = `${API_BASE}${queryUrl}`;
             
             // Kita gunakan helper apiFetch milik Anda jika tersedia, jika tidak, fetch manual dengan token
             let data = [];
             
             if (typeof window.apiFetch === 'function') {
-                data = await window.apiFetch(`/api/admin/children/search?${type}=${encodeURIComponent(keyword)}`);
+                data = await window.apiFetch(queryUrl);
             } else {
                 const token = localStorage.getItem('access_token');
                 const response = await fetch(endpoint, {
@@ -214,16 +216,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 icon = 'ph-warning-circle';
             }
 
+            let ageMonths = child.age_in_months || child.age_months;
+            if (ageMonths === undefined && (child.date_of_birth || child.birth_date)) {
+                const birth = new Date(child.date_of_birth || child.birth_date);
+                const now = new Date();
+                ageMonths = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+                if (ageMonths < 0) ageMonths = 0;
+            }
+
             return `
             <tr class="hover:bg-blue-50/50 transition-colors group">
                 <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center">
                         <div class="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                            <i class="ph ${child.gender === 'L' ? 'ph-gender-male' : 'ph-gender-female'} text-xl"></i>
+                            <i class="ph ${(child.gender === 'L' || child.gender === 'M') ? 'ph-gender-male' : 'ph-gender-female'} text-xl"></i>
                         </div>
                         <div class="ml-4">
                             <div class="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">${child.name}</div>
-                            <div class="text-sm text-gray-500">${child.age_months} Bulan</div>
+                            <div class="text-sm text-gray-500">${ageMonths !== undefined ? ageMonths + ' Bulan' : '-'}</div>
                         </div>
                     </div>
                 </td>

@@ -127,8 +127,20 @@
             }
         } catch (error) {
             let message = 'Pendaftaran gagal. Silakan coba lagi.';
-            if (error.data && error.data.message) {
-                message = error.data.message;
+            if (error.data) {
+                if (typeof error.data.detail === 'string') {
+                    message = error.data.detail;
+                } else if (Array.isArray(error.data.detail)) {
+                    message = error.data.detail.map(e => {
+                        if (e.msg && e.msg.includes('email')) return 'Format email tidak valid.';
+                        if (e.msg && e.msg.includes('min_length')) return 'Input terlalu pendek (Username min 3 karakter, Password min 6 karakter).';
+                        return e.msg || 'Format input tidak valid';
+                    }).join('\n');
+                } else if (error.data.message) {
+                    message = error.data.message;
+                }
+            } else if (error.message) {
+                message = error.message;
             }
             
             Swal.fire({
