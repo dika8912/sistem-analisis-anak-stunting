@@ -209,6 +209,12 @@ async def create_child(
         }
         
         new_child = await child_repo.create(db, child_data)
+        try:
+            loaded_child = await child_repo.get_by_id_with_guardian(db, new_child.id)
+            if isinstance(loaded_child, Child):
+                return loaded_child
+        except Exception:
+            pass
         return new_child
     except HTTPException:
         raise
@@ -284,7 +290,7 @@ async def search_children(
     db: AsyncSession = Depends(get_db_session), 
     current_user: User = Depends(require_admin)
 ):
-    query = select(Child).join(Guardian).where(
+    query = select(Child).options(selectinload(Child.guardian)).join(Guardian).where(
         and_(
             Guardian.name.ilike(f"%{parent_name}%"),
             Guardian.nomor_kk == nomor_kk
@@ -302,9 +308,9 @@ async def search_children_by_category(
     current_user: User = Depends(require_admin)
 ):
     if category.lower() == 'nik':
-        query = select(Child).where(Child.nik == query_val)
+        query = select(Child).options(selectinload(Child.guardian)).where(Child.nik == query_val)
     elif category.lower() == 'nama':
-        query = select(Child).where(Child.name.ilike(f"%{query_val}%"))
+        query = select(Child).options(selectinload(Child.guardian)).where(Child.name.ilike(f"%{query_val}%"))
     else:
         raise HTTPException(status_code=400, detail="Category must be 'nik' or 'nama'")
     result = await db.execute(query)
@@ -316,6 +322,12 @@ async def update_child(id: str, request: ChildUpdateRequest, db: AsyncSession = 
     child = await child_repo.update(db, id=id, obj_in=update_data)
     if not child:
         raise HTTPException(status_code=404, detail="Child not found")
+    try:
+        loaded_child = await child_repo.get_by_id_with_guardian(db, id)
+        if isinstance(loaded_child, Child):
+            return loaded_child
+    except Exception:
+        pass
     return child
 
 @router.delete("/api/admin/children/{id}", status_code=status.HTTP_204_NO_CONTENT)
