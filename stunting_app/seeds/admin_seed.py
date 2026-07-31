@@ -15,6 +15,7 @@ async def seed_admin():
         # Check if admin already exists
         query = select(User).where(User.username == "admin")
         result = await db.execute(query)
+        admin = result.scalar_one_or_none()
         if admin:
             admin.role = RoleEnum.admin
             admin.hashed_password = get_password_hash("admin123")
