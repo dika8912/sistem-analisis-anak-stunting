@@ -170,26 +170,52 @@ async def create_child(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_user)
 ):
-    target_guardian_id = None
-    if current_user.role == "admin" and request.guardian_id:
-        target_guardian_id = request.guardian_id
-    else:
-        query = select(Guardian).where(Guardian.user_id == current_user.id)
-        guardian = (await db.execute(query)).scalars().first()
-        if not guardian:
-            raise HTTPException(status_code=403, detail="Hanya akun dengan profil orang tua yang dapat menambahkan anak. Jika admin, harap tentukan Orang Tua (guardian_id).")
-        target_guardian_id = guardian.id
+    try:
+        target_guardian_id = None
+        if current_user.role == "admin" and request.guardian_id:
+            target_guardian_id = request.guardian_id
+        else:
+            query = select(Guardian).where(Guardian.user_id == current_user.id)
+            guardian = (await db.execute(query)).scalars().first()
+            if not guardian:
+                new_guardian = Guardian(
+                    user_id=current_user.id,
+                    name=current_user.username,
+                    phone="-",
+                    address="-"
+                )
+                db.add(new_guardian)
+                await db.commit()
+                await db.refresh(new_guardian)
+                guardian = new_guardian
+            target_guardian_id = guardian.id
+            
+        raw_gender = str(request.gender).upper().strip()
+        if raw_gender in ["L", "LAKI-LAKI", "MALE", "BOY"]:
+            gender_val = "M"
+        elif raw_gender in ["P", "PEREMPUAN", "FEMALE", "GIRL"]:
+            gender_val = "F"
+        else:
+            gender_val = raw_gender[:1] if raw_gender else "M"
+
+        clean_nik = request.nik.strip() if (request.nik and request.nik.strip()) else None
+            
+        child_data = {
+            "guardian_id": target_guardian_id,
+            "name": request.name,
+            "gender": gender_val,
+            "date_of_birth": request.date_of_birth,
+            "nik": clean_nik
+        }
         
-    child_data = {
-        "guardian_id": target_guardian_id,
-        "name": request.name,
-        "gender": request.gender,
-        "date_of_birth": request.date_of_birth,
-        "nik": request.nik
-    }
-    
-    new_child = await child_repo.create(db, child_data)
-    return new_child
+        new_child = await child_repo.create(db, child_data)
+        return new_child
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=f"Gagal menambahkan data anak: {str(e)}")
 
 @router.get("/api/children/{id}/history")
 async def get_child_history(id: str, db: AsyncSession = Depends(get_db_session), current_user: User = Depends(get_current_active_user)):
