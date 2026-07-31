@@ -15,10 +15,11 @@ async def seed_admin():
         # Check if admin already exists
         query = select(User).where(User.username == "admin")
         result = await db.execute(query)
-        admin = result.scalar_one_or_none()
-        
         if admin:
-            print("Admin user already exists.")
+            admin.role = RoleEnum.admin
+            admin.hashed_password = get_password_hash("admin123")
+            await db.commit()
+            print("Admin user already exists - ensured role is admin and password is admin123.")
             return
 
         new_admin = User(
