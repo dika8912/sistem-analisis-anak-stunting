@@ -235,13 +235,44 @@ async def get_child_history(id: str, db: AsyncSession = Depends(get_db_session),
     for m in measurements:
         if m.stunting_result:
             status = m.stunting_result.stunting_status_ml or m.stunting_result.stunting_status_who
+            stunting_dict = {
+                "stunting_status_who": m.stunting_result.stunting_status_who,
+                "wasting_status_who": m.stunting_result.wasting_status_who,
+                "stunting_status_ml": m.stunting_result.stunting_status_ml,
+                "wasting_status_ml": m.stunting_result.wasting_status_ml,
+                "ml_stunting_confidence": m.stunting_result.ml_stunting_confidence or 0.0,
+                "ml_wasting_confidence": m.stunting_result.ml_wasting_confidence or 0.0,
+                "haz_zscore": m.stunting_result.haz_zscore,
+                "waz_zscore": m.stunting_result.waz_zscore,
+                "whz_zscore": m.stunting_result.whz_zscore,
+            }
         else:
             status = "normal"
+            stunting_dict = {
+                "stunting_status_who": "normal",
+                "wasting_status_who": "normal",
+                "stunting_status_ml": "normal",
+                "wasting_status_ml": "normal",
+                "ml_stunting_confidence": 0.0,
+                "ml_wasting_confidence": 0.0,
+                "haz_zscore": 0.0,
+                "waz_zscore": 0.0,
+                "whz_zscore": 0.0,
+            }
         meal_plan = RecommendationService.get_meal_plan(status, m.age_in_months)
         response.append({
-            "measurement": m,
-            "result": m.stunting_result,
-            "meal_plan": meal_plan
+            "id": m.id,
+            "child_id": m.child_id,
+            "measured_at": m.measured_at,
+            "age_in_months": m.age_in_months,
+            "weight": m.weight,
+            "height": m.height,
+            "head_circumference": m.head_circumference,
+            "measured_by": m.measured_by,
+            "stunting_result": stunting_dict,
+            "food_recommendations": [],
+            "meal_plan": meal_plan,
+            "next_visit_date": None
         })
         
     return response
