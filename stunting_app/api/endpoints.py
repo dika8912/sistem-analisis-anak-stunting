@@ -87,8 +87,13 @@ async def create_measurement(
             if not guardian or child.guardian_id != guardian.id:
                 raise HTTPException(status_code=403, detail="Not authorized to add measurement for this child")
             
-        age_td = request.measured_at - child.date_of_birth
-        age_months = max(0, math.floor(age_td.days / 30.44))
+        years_diff = request.measured_at.year - child.date_of_birth.year
+        months_diff = request.measured_at.month - child.date_of_birth.month
+        day_diff = request.measured_at.day - child.date_of_birth.day
+        age_months = years_diff * 12 + months_diff
+        if day_diff < 0 and age_months > 0:
+            age_months -= 1
+        age_months = max(0, min(age_months, 60))
         
         ml_res_dict = ml_service.predict(child.gender, age_months, request.height, request.weight)
         
