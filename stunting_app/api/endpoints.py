@@ -240,17 +240,17 @@ async def get_child_history(id: str, db: AsyncSession = Depends(get_db_session),
     response = []
     for m in measurements:
         if m.stunting_result:
-            status = m.stunting_result.stunting_status_ml or m.stunting_result.stunting_status_who
+            status = getattr(m.stunting_result, "stunting_status_ml", None) or getattr(m.stunting_result, "stunting_status_who", "normal") or "normal"
             stunting_dict = {
-                "stunting_status_who": m.stunting_result.stunting_status_who,
-                "wasting_status_who": m.stunting_result.wasting_status_who,
-                "stunting_status_ml": m.stunting_result.stunting_status_ml,
-                "wasting_status_ml": m.stunting_result.wasting_status_ml,
-                "ml_stunting_confidence": m.stunting_result.ml_stunting_confidence or 0.0,
-                "ml_wasting_confidence": m.stunting_result.ml_wasting_confidence or 0.0,
-                "haz_zscore": m.stunting_result.haz_zscore,
-                "waz_zscore": m.stunting_result.waz_zscore,
-                "whz_zscore": m.stunting_result.whz_zscore,
+                "stunting_status_who": getattr(m.stunting_result, "stunting_status_who", "normal") or "normal",
+                "wasting_status_who": getattr(m.stunting_result, "wasting_status_who", "normal") or "normal",
+                "stunting_status_ml": getattr(m.stunting_result, "stunting_status_ml", "normal") or "normal",
+                "wasting_status_ml": getattr(m.stunting_result, "wasting_status_ml", "normal") or "normal",
+                "ml_stunting_confidence": getattr(m.stunting_result, "ml_stunting_confidence", 0.0) or 0.0,
+                "ml_wasting_confidence": getattr(m.stunting_result, "ml_wasting_confidence", 0.0) or 0.0,
+                "haz_zscore": getattr(m.stunting_result, "haz_zscore", 0.0) or 0.0,
+                "waz_zscore": getattr(m.stunting_result, "waz_zscore", 0.0) or 0.0,
+                "whz_zscore": getattr(m.stunting_result, "whz_zscore", 0.0) or 0.0,
             }
         else:
             status = "normal"
